@@ -146,42 +146,52 @@ void GLDisplay::resizeGL(int width, int height)
 #ifdef QT_OPENGL_ES_1
 	glOrthof(-2, +2, -2, +2, 1.0, 15.0);
 #else
-	glOrtho(-2, +2, -2, +2, 1.0, 15.0);
+	glOrtho(-1, +1, -1, +1, 1.0, 15.0);
 #endif
 	glMatrixMode(GL_MODELVIEW);
 }
 
 void GLDisplay::mousePressEvent(QMouseEvent *event)
 {
-	lastPos = event->pos();
+	if (!lockRotation)
+	{
+		lastPos = event->pos();
+	}
+	event->accept();
 }
 
 void GLDisplay::mouseMoveEvent(QMouseEvent *event)
 {
-	int dx = event->x() - lastPos.x();
-	int dy = event->y() - lastPos.y();
-
-	if (event->buttons() & Qt::LeftButton)
+	if (!lockRotation)
 	{
-		setXRotation(xRot + dy);
-		setYRotation(yRot + dx);
-	}
-	else if (event->buttons() & Qt::RightButton)
-	{
-		setXRotation(xRot + dy);
-		setZRotation(zRot + dx);
-	}
+		int dx = event->x() - lastPos.x();
+		int dy = event->y() - lastPos.y();
 
-	lastPos = event->pos();
+		if (event->buttons() & Qt::LeftButton)
+		{
+			setXRotation(xRot + dy);
+			setYRotation(yRot + dx);
+		}
+		else if (event->buttons() & Qt::RightButton)
+		{
+			setXRotation(xRot + dy);
+			setZRotation(zRot + dx);
+		}
+
+		lastPos = event->pos();
+	}
+	event->accept();
 }
 
 void GLDisplay::wheelEvent(QWheelEvent *event)
 {
-	QPoint numDegrees = event->angleDelta() / 8;
-
-	if (!numDegrees.isNull()) {
-		QPoint numSteps = numDegrees / 15;
-		setScale(scale + numSteps.y() / 10.0);
+	if (!lockRotation)
+	{
+		QPoint numDegrees = event->angleDelta() / 8;
+		if (!numDegrees.isNull()) {
+			QPoint numSteps = numDegrees / 15;
+			setScale(scale + numSteps.y() / 10.0);
+		}
 	}
 	event->accept();
 }
@@ -198,6 +208,7 @@ void GLDisplay::setScale(double scale)
 
 void GLDisplay::drawImage(GLsizei width, GLsizei height, GLvoid *data)
 {
+	lockRotation = true;
 	glDisable(GL_LIGHTING);
 	glEnable(GL_TEXTURE_2D);
 	glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);

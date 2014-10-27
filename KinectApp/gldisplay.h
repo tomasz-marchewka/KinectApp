@@ -39,7 +39,7 @@ protected:
 private:
 
 	double scale;
-
+	bool lockRotation;
 	int xRot;
 	int yRot;
 	int zRot;

@@ -1,6 +1,10 @@
 #include "OpenNITracking.h"
 #include "Logger.h"
 
+#define TEXTURE_SIZE 512
+#define MIN_NUM_CHUNKS(data_size, chunk_size)	((((data_size)-1) / (chunk_size) + 1))
+#define MIN_CHUNKS_SIZE(data_size, chunk_size)	(MIN_NUM_CHUNKS(data_size, chunk_size) * (chunk_size))
+
 static Logger &logger = Logger::getInstance();
 
 const char* OpenNITracking::methodName = "OpenNI";
@@ -61,6 +65,23 @@ bool OpenNITracking::init()
 		logger.log("OpenNI shutdown");
 		return false;
 	}
+
+	if (!color.isValid())
+	{
+		message = "Color stream is invalid\n";
+		message += openni::OpenNI::getExtendedError();
+		logger.log(message);
+		color.destroy();
+		openni::OpenNI::shutdown();
+		logger.log("OpenNI shutdown");
+		return false;
+	}
+	openni::VideoMode colorVideoMode = color.getVideoMode();
+	colorWidth = colorVideoMode.getResolutionX();
+	colorHeight = colorVideoMode.getResolutionY();
+	texMapX = MIN_CHUNKS_SIZE(colorWidth, TEXTURE_SIZE);
+	texMapY = MIN_CHUNKS_SIZE(colorHeight, TEXTURE_SIZE);
+	texMap = new openni::RGB888Pixel[texMapX * texMapY];
 	
 	return true;
 }

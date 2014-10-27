@@ -16,6 +16,13 @@ public:
 private:
 	static const char * methodName;
 
+	openni::RGB888Pixel* texMap;
+	unsigned int texMapX;
+	unsigned int texMapY;
+
+	int colorWidth;
+	int colorHeight;
+
 	openni::Device device;
 	openni::VideoStream color;
 
