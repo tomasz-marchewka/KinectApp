@@ -13,14 +13,11 @@ public:
 	virtual bool init();
 	virtual void draw() = 0;
 	virtual QList<QPushButton *> getFunctionList() = 0;
-	virtual QString getErrorMessage();
 private:
 	static const char * methodName;
 
 	openni::Device device;
 	openni::VideoStream color;
-
-	QString errorMessage;
 
 };
 

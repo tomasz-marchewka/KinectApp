@@ -14,7 +14,6 @@ public:
 	virtual bool init() = 0;
 	virtual void draw() = 0;
 	virtual QList<QPushButton *> getFunctionList() = 0;
-	virtual QString getErrorMessage() = 0;
 
 	virtual void setDisplay(GLDisplay *display);
 	virtual QString getName();
