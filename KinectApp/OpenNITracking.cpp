@@ -92,8 +92,10 @@ bool OpenNITracking::init()
 	openni::VideoMode colorVideoMode = color.getVideoMode();
 	colorWidth = colorVideoMode.getResolutionX();
 	colorHeight = colorVideoMode.getResolutionY();
-	texMapX = MIN_CHUNKS_SIZE(colorWidth, TEXTURE_SIZE);
-	texMapY = MIN_CHUNKS_SIZE(colorHeight, TEXTURE_SIZE);
+	//texMapX = MIN_CHUNKS_SIZE(colorWidth, TEXTURE_SIZE);
+	//texMapY = MIN_CHUNKS_SIZE(colorHeight, TEXTURE_SIZE);
+	texMapX = colorWidth;
+	texMapY = colorHeight;
 	texMap = new openni::RGB888Pixel[texMapX * texMapY];
 	
 	logger.log("OpenNI initialized succesful");
@@ -102,7 +104,31 @@ bool OpenNITracking::init()
 
 void OpenNITracking::draw()
 {
+	color.readFrame(&colorFrame);
+	memset(texMap, 0, texMapX * texMapY * sizeof(openni::RGB888Pixel));
 
+	if (colorFrame.isValid())
+	{
+		const openni::RGB888Pixel* pImageRow = (const openni::RGB888Pixel*)colorFrame.getData();
+		openni::RGB888Pixel* pTexRow = texMap + colorFrame.getCropOriginY() * texMapX;
+		int rowSize = colorFrame.getStrideInBytes() / sizeof(openni::RGB888Pixel);
+
+		for (int y = 0; y < colorFrame.getHeight(); ++y)
+		{
+			const openni::RGB888Pixel* pImage = pImageRow;
+			openni::RGB888Pixel* pTex = pTexRow + colorFrame.getCropOriginX();
+
+			for (int x = 0; x < colorFrame.getWidth(); ++x, ++pImage, ++pTex)
+			{
+				*pTex = *pImage;
+			}
+
+			pImageRow += rowSize;
+			pTexRow += texMapX;
+		}
+	}
+
+	display->setImage(texMapX, texMapY, texMap);
 }
 
 void OpenNITracking::startVideo()
@@ -118,11 +144,18 @@ void OpenNITracking::stopTracking()
 
 void OpenNITracking::run()
 {
-	init();
-	while (isRunning)
+	if (init())
 	{
-		QThread::sleep(5);
-		logger.log("OpenNI thread is running");
+		while (isRunning)
+		{
+			draw();
+			logger.log("OpenNI thread is running");
+		}
 	}
+	else
+	{
+		logger.log("Can't initialize openNI");
+	}
+
 	logger.log("OpenNI thread is stoped");
 }

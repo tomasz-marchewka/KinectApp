@@ -11,8 +11,10 @@ public:
 	GLDisplay(QWidget *parent);
 	~GLDisplay();
 
-	void drawImage(GLsizei width, GLsizei height, GLvoid *data);
+	void drawImage();
 	void drawShape();
+
+	void setImage(GLsizei width, GLsizei height, GLvoid *data);
 
 public slots:
 	void setXRotation(int angle);
@@ -45,6 +47,10 @@ private:
 	int zRot;
 
 	QPoint lastPos;
+
+	GLvoid *texData;
+	GLsizei texWidth;
+	GLsizei texHeight;
 	
 };
 

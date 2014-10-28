@@ -49,6 +49,7 @@ GLDisplay::GLDisplay(QWidget *parent)
 	yRot = 0;
 	zRot = 0;
 	scale = 1.0;
+	texData = NULL;
 	//drawFunction = draw;
 }
 
@@ -129,11 +130,11 @@ void GLDisplay::paintGL()
 	glRotatef(yRot, 0.0, 1.0, 0.0);
 	glRotatef(zRot, 0.0, 0.0, 1.0);
 	glScalef(scale, scale, scale);
-	char pixels[] = {
-		255, 0, 0, 0,
-		0, 255, 0, 0
-	};
-	drawImage(1, 2, pixels);
+
+	if (texData != NULL)
+	{
+		drawImage();
+	}
 }
 
 void GLDisplay::resizeGL(int width, int height)
@@ -185,6 +186,7 @@ void GLDisplay::mouseMoveEvent(QMouseEvent *event)
 
 void GLDisplay::wheelEvent(QWheelEvent *event)
 {
+	updateGL();
 	if (!lockRotation)
 	{
 		QPoint numDegrees = event->angleDelta() / 8;
@@ -206,7 +208,7 @@ void GLDisplay::setScale(double scale)
 	updateGL();
 }
 
-void GLDisplay::drawImage(GLsizei width, GLsizei height, GLvoid *data)
+void GLDisplay::drawImage()
 {
 	lockRotation = true;
 	glDisable(GL_LIGHTING);
@@ -214,7 +216,7 @@ void GLDisplay::drawImage(GLsizei width, GLsizei height, GLvoid *data)
 	glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, texData);
 
 	// Display the OpenGL texture map
 	glColor4f(1, 1, 1, 1);
@@ -236,6 +238,11 @@ void GLDisplay::drawImage(GLsizei width, GLsizei height, GLvoid *data)
 
 	glEnd();
 
-	//updateGL();
+}
 
+void GLDisplay::setImage(GLsizei width, GLsizei height, GLvoid *data)
+{
+	texWidth = width;
+	texHeight = height;
+	texData = data;
 }

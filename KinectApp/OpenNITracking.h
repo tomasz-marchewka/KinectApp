@@ -34,6 +34,7 @@ private:
 
 	openni::Device device;
 	openni::VideoStream color;
+	openni::VideoFrameRef colorFrame;
 	
 };
 
