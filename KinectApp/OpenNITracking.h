@@ -11,10 +11,19 @@ public:
 	~OpenNITracking();
 
 	virtual bool init();
-	virtual void draw() = 0;
-	virtual QList<QPushButton *> getFunctionList() = 0;
+	virtual void draw();
+
+public slots:
+	void startVideo();
+	void stopTracking();
+
+protected:
+	void run();
+
 private:
 	static const char * methodName;
+
+	void createButtons();
 
 	openni::RGB888Pixel* texMap;
 	unsigned int texMapX;
@@ -25,6 +34,6 @@ private:
 
 	openni::Device device;
 	openni::VideoStream color;
-
+	
 };
 

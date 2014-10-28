@@ -6,18 +6,29 @@
 #define MIN_CHUNKS_SIZE(data_size, chunk_size)	(MIN_NUM_CHUNKS(data_size, chunk_size) * (chunk_size))
 
 static Logger &logger = Logger::getInstance();
-
 const char* OpenNITracking::methodName = "OpenNI";
 
 OpenNITracking::OpenNITracking(GLDisplay *display) : TrackingMethod(QString(methodName), display)
 {
+	createButtons();
 }
 
 
 OpenNITracking::~OpenNITracking()
 {
+	openni::OpenNI::shutdown();
 }
 
+void OpenNITracking::createButtons()
+{
+	//start button
+	QPushButton* startButton = new QPushButton("Start");
+	connect(startButton, SIGNAL(clicked()), SLOT(startVideo()));
+	//stop button 
+	QPushButton* stopButton = new QPushButton("Stop");
+	connect(stopButton, SIGNAL(clicked()), SLOT(stopTracking()));
+	options  << startButton << stopButton;
+}
 
 bool OpenNITracking::init()
 {
@@ -31,6 +42,8 @@ bool OpenNITracking::init()
 		logger.log(message);
 		return false;
 	}
+
+	logger.log("OpenNI initalizing...");
 
 	status = device.open(openni::ANY_DEVICE);
 	if (status != openni::STATUS_OK)
@@ -83,5 +96,33 @@ bool OpenNITracking::init()
 	texMapY = MIN_CHUNKS_SIZE(colorHeight, TEXTURE_SIZE);
 	texMap = new openni::RGB888Pixel[texMapX * texMapY];
 	
+	logger.log("OpenNI initialized succesful");
 	return true;
+}
+
+void OpenNITracking::draw()
+{
+
+}
+
+void OpenNITracking::startVideo()
+{
+	isRunning = true;
+	QThread::start();
+}
+
+void OpenNITracking::stopTracking()
+{
+	isRunning = false;
+}
+
+void OpenNITracking::run()
+{
+	init();
+	while (isRunning)
+	{
+		QThread::sleep(5);
+		logger.log("OpenNI thread is running");
+	}
+	logger.log("OpenNI thread is stoped");
 }

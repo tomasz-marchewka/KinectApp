@@ -2,9 +2,9 @@
 #include <ctime>
 #include <stdio.h>
 #include <QString>
-#include <QWidget>
+#include <qthread.h>
 
-class Logger : public QObject
+class Logger : public QThread
 {
 	Q_OBJECT
 public:

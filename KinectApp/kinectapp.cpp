@@ -1,6 +1,7 @@
 #include "kinectapp.h"
 #include "MockTracking.h"
 #include "Logger.h"
+#include "OpenNITracking.h"
 
 
 static Logger &logger = Logger::getInstance();
@@ -9,9 +10,11 @@ KinectApp::KinectApp(QWidget *parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
-	ui.console->setVisible(false);
+	//ui.console->setVisible(false);
+	addTrackingMethod(new OpenNITracking(ui.glDisplay));
 	addTrackingMethod(new MockTracking(ui.glDisplay));
 	addTrackingMethod(new MockTracking("Test mock", ui.glDisplay));
+	
 	connect(ui.comboBox, SIGNAL(activated(int)), SLOT(selectMethod(int)));
 	connect(ui.checkBox, SIGNAL(stateChanged(int)), SLOT(showConsole(int)));
 	connect(&logger, SIGNAL(logMessage(QString)), SLOT(printOnConsole(QString)));

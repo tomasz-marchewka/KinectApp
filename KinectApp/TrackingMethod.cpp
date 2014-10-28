@@ -20,3 +20,8 @@ QString TrackingMethod::getName()
 {
 	return name;
 }
+
+QList<QPushButton *> TrackingMethod::getFunctionList()
+{
+	return options;
+}
