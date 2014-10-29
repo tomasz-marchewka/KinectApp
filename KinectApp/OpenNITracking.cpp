@@ -10,13 +10,13 @@ const char* OpenNITracking::methodName = "OpenNI";
 
 OpenNITracking::OpenNITracking(GLDisplay *display) : TrackingMethod(QString(methodName), display)
 {
+	isRunning = false;
 	createButtons();
 }
 
 
 OpenNITracking::~OpenNITracking()
 {
-	openni::OpenNI::shutdown();
 }
 
 void OpenNITracking::createButtons()
@@ -105,8 +105,6 @@ bool OpenNITracking::init()
 void OpenNITracking::draw()
 {
 	color.readFrame(&colorFrame);
-	memset(texMap, 0, texMapX * texMapY * sizeof(openni::RGB888Pixel));
-
 	if (colorFrame.isValid())
 	{
 		const openni::RGB888Pixel* pImageRow = (const openni::RGB888Pixel*)colorFrame.getData();
@@ -144,18 +142,25 @@ void OpenNITracking::stopTracking()
 
 void OpenNITracking::run()
 {
+	static int counter = 0;
 	if (init())
 	{
+		logger.log("OpenNI thread is running...");
 		while (isRunning)
 		{
 			draw();
-			logger.log("OpenNI thread is running");
 		}
 	}
 	else
 	{
 		logger.log("Can't initialize openNI");
 	}
-
+	openni::OpenNI::shutdown();
 	logger.log("OpenNI thread is stoped");
+}
+
+void OpenNITracking::close()
+{
+	isRunning = false;
+	QThread::wait();
 }

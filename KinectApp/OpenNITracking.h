@@ -12,6 +12,7 @@ public:
 
 	virtual bool init();
 	virtual void draw();
+	virtual void close();
 
 public slots:
 	void startVideo();

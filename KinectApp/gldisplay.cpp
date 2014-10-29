@@ -50,7 +50,9 @@ GLDisplay::GLDisplay(QWidget *parent)
 	zRot = 0;
 	scale = 1.0;
 	texData = NULL;
-	//drawFunction = draw;
+	QTimer *timer = new QTimer(this);
+	connect(timer, SIGNAL(timeout()), this, SLOT(update()));
+	timer->start(33);
 }
 
 GLDisplay::~GLDisplay()
@@ -139,8 +141,8 @@ void GLDisplay::paintGL()
 
 void GLDisplay::resizeGL(int width, int height)
 {
-	int side = qMin(width, height);
-	glViewport((width - side) / 2, (height - side) / 2, side, side);
+	//glViewport((width - side) / 2, (height - side) / 2, side, side);
+	glViewport(0, 0, width, height);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -223,18 +225,17 @@ void GLDisplay::drawImage()
 
 	glBegin(GL_QUADS);
 
-	// upper left
-	glTexCoord2f(-1.0, -1.0);
-	glVertex2f(-1.0, -1.0);
-	// upper right
-	glTexCoord2f(1.0, -1.0);
-	glVertex2f(1.0, -1.0);
-	// bottom right
-	glTexCoord2f(1.0, 1.0);
-	glVertex2f(1.0, 1.0);
-	// bottom left
-	glTexCoord2f(-1.0, 1.0);
-	glVertex2f(-1.0, 1.0);
+	glTexCoord2f(0.0f, 1.0f);
+	glVertex2f(-1.0f, -1.0f);
+
+	glTexCoord2f(1.0f, 1.0f);
+	glVertex2f(1.0f, -1.0f);
+
+	glTexCoord2f(1.0f, 0.0f);
+	glVertex2f(1.0f, 1.0f);
+
+	glTexCoord2f(0.0f, 0.0f);
+	glVertex2f(-1.0f, 1.0f);
 
 	glEnd();
 
@@ -245,4 +246,9 @@ void GLDisplay::setImage(GLsizei width, GLsizei height, GLvoid *data)
 	texWidth = width;
 	texHeight = height;
 	texData = data;
+}
+
+void GLDisplay::update()
+{
+	updateGL();
 }

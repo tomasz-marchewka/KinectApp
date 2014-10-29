@@ -12,6 +12,8 @@ public:
 
 	virtual bool init();
 	virtual void draw();
+	virtual void close();
+
 	virtual QList<QPushButton*> getFunctionList();
 	virtual QString getErrorMessage();
 

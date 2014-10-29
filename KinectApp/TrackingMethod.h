@@ -13,6 +13,7 @@ public:
 
 	virtual bool init() = 0;
 	virtual void draw() = 0;
+	virtual void close() = 0;
 	virtual QList<QPushButton *> getFunctionList();
 
 	virtual void setDisplay(GLDisplay *display);

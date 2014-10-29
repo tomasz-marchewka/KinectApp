@@ -25,7 +25,7 @@ KinectApp::KinectApp(QWidget *parent)
 
 KinectApp::~KinectApp()
 {
-
+	selectedMethod->close();
 }
 
 void KinectApp::addTrackingMethod(TrackingMethod * method)

@@ -21,6 +21,7 @@ public slots:
 	void setYRotation(int angle);
 	void setZRotation(int angle);
 	void setScale(double scale);
+	void update();
 
 signals:
 	void xRotationChanged(int angle);
@@ -39,6 +40,8 @@ protected:
 	void mouseMoveEvent(QMouseEvent *event);
 	void wheelEvent(QWheelEvent *event);
 private:
+
+	QMutex mutex;
 
 	double scale;
 	bool lockRotation;

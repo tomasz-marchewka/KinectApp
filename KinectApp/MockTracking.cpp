@@ -53,3 +53,8 @@ void MockTracking::button1()
 	QMessageBox::information(0, tr("test"), tr("testtestets"), QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
 
 }
+
+void MockTracking::close()
+{
+
+}
