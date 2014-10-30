@@ -1,16 +1,11 @@
 #include "OpenNITracking.h"
 #include "Logger.h"
 
-#define TEXTURE_SIZE 512
-#define MIN_NUM_CHUNKS(data_size, chunk_size)	((((data_size)-1) / (chunk_size) + 1))
-#define MIN_CHUNKS_SIZE(data_size, chunk_size)	(MIN_NUM_CHUNKS(data_size, chunk_size) * (chunk_size))
-
 static Logger &logger = Logger::getInstance();
 const char* OpenNITracking::methodName = "OpenNI";
 
 OpenNITracking::OpenNITracking(GLDisplay *display) : TrackingMethod(QString(methodName), display)
 {
-	isRunning = false;
 	createButtons();
 }
 
@@ -92,8 +87,7 @@ bool OpenNITracking::init()
 	openni::VideoMode colorVideoMode = color.getVideoMode();
 	colorWidth = colorVideoMode.getResolutionX();
 	colorHeight = colorVideoMode.getResolutionY();
-	//texMapX = MIN_CHUNKS_SIZE(colorWidth, TEXTURE_SIZE);
-	//texMapY = MIN_CHUNKS_SIZE(colorHeight, TEXTURE_SIZE);
+
 	texMapX = colorWidth;
 	texMapY = colorHeight;
 	texMap = new openni::RGB888Pixel[texMapX * texMapY];
@@ -142,7 +136,6 @@ void OpenNITracking::stopTracking()
 
 void OpenNITracking::run()
 {
-	static int counter = 0;
 	if (init())
 	{
 		logger.log("OpenNI thread is running...");
@@ -150,11 +143,14 @@ void OpenNITracking::run()
 		{
 			draw();
 		}
+	//	memset(texMap, 0, texMapX*texMapY*sizeof(openni::RGB888Pixel));
 	}
 	else
 	{
 		logger.log("Can't initialize openNI");
 	}
+	color.destroy();
+	device.close();
 	openni::OpenNI::shutdown();
 	logger.log("OpenNI thread is stoped");
 }

@@ -41,8 +41,6 @@ protected:
 	void wheelEvent(QWheelEvent *event);
 private:
 
-	QMutex mutex;
-
 	double scale;
 	bool lockRotation;
 	int xRot;

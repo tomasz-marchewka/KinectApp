@@ -22,7 +22,7 @@ protected:
 	void run();
 
 private:
-	static const char * methodName;
+	static const char* methodName;
 
 	void createButtons();
 

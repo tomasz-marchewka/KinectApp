@@ -2,6 +2,7 @@
 #include "MockTracking.h"
 #include "Logger.h"
 #include "OpenNITracking.h"
+#include "KinectSDKTracking.h"
 
 
 static Logger &logger = Logger::getInstance();
@@ -11,6 +12,7 @@ KinectApp::KinectApp(QWidget *parent)
 {
 	ui.setupUi(this);
 	addTrackingMethod(new OpenNITracking(ui.glDisplay));
+	addTrackingMethod(new KinectSDKTracking(ui.glDisplay));
 	addTrackingMethod(new MockTracking(ui.glDisplay));
 	addTrackingMethod(new MockTracking("Test mock", ui.glDisplay));
 	

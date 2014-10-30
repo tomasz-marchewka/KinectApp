@@ -4,6 +4,7 @@ TrackingMethod::TrackingMethod(const QString &name, GLDisplay *display)
 {
 	this->display = display;
 	this->name = name;
+	isRunning = false;
 }
 
 
