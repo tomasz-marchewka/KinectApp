@@ -12,6 +12,8 @@ OpenNITracking::OpenNITracking(GLDisplay *display) : TrackingMethod(QString(meth
 
 OpenNITracking::~OpenNITracking()
 {
+	delete texMap;
+	texMap = NULL;
 }
 
 void OpenNITracking::createButtons()
@@ -143,7 +145,7 @@ void OpenNITracking::run()
 		{
 			draw();
 		}
-	//	memset(texMap, 0, texMapX*texMapY*sizeof(openni::RGB888Pixel));
+		memset(texMap, 0, texMapX*texMapY*sizeof(openni::RGB888Pixel));
 	}
 	else
 	{

@@ -29,6 +29,7 @@ private:
 	unsigned char* data;
 	unsigned int textureId;
 	void* rgbStream;
+	void* depthStream;
 	INuiSensor* sensor;
 
 	void createButtons();

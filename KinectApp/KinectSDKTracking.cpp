@@ -60,7 +60,7 @@ bool KinectSDKTracking::init()
 		return false;
 	}
 
-	status = sensor->NuiInitialize(NUI_INITIALIZE_FLAG_USES_COLOR);
+	status = sensor->NuiInitialize(NUI_INITIALIZE_FLAG_USES_DEPTH | NUI_INITIALIZE_FLAG_USES_COLOR);
 	if (status != S_OK)
 	{
 		logger.log("Couldn't initialize nui!\nError code: ");
@@ -71,7 +71,15 @@ bool KinectSDKTracking::init()
 	status = sensor->NuiImageStreamOpen(NUI_IMAGE_TYPE_COLOR, videoResolution.getResolutionType(), 0, 2, NULL, &rgbStream);
 	if (status != S_OK)
 	{
-		logger.log("Couldn't open image stream!\nError code: ");
+		logger.log("Couldn't open color stream!\nError code: ");
+		logger.log(QString::number(status));
+		return false;
+	}
+
+	status = sensor->NuiImageStreamOpen(NUI_IMAGE_TYPE_DEPTH, videoResolution.getResolutionType(), 0, 2, NULL, &depthStream);
+	if (status != S_OK)
+	{
+		logger.log("Couldn't open depth stream!\nError code: ");
 		logger.log(QString::number(status));
 		return false;
 	}
@@ -101,10 +109,11 @@ void KinectSDKTracking::run()
 		{
 			draw();
 		}
+		memset(data, 0, videoResolution.getWidth() * videoResolution.getHeight() * 3);
 	}
 	else
 	{
-		logger.log("Can't initialize openNI");
+		logger.log("Can't initialize kinectSDK");
 	}
 	if (sensor)
 	{

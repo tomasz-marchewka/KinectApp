@@ -20,7 +20,7 @@ KinectApp::KinectApp(QWidget *parent)
 	connect(ui.checkBox, SIGNAL(stateChanged(int)), SLOT(showConsole(int)));
 	connect(&logger, SIGNAL(logMessage(QString)), SLOT(printOnConsole(QString)));
 
-
+	selectedMethod = NULL;
 	setButtons();
 	selectMethod(0);
 }
@@ -41,6 +41,7 @@ void KinectApp::selectMethod(int index)
 	if (selectedMethod != NULL)
 	{
 		hideButtons();
+		selectedMethod->close();
 	}
 	selectedMethod = methods.at(index);
 	if (selectedMethod != NULL)
