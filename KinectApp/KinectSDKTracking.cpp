@@ -212,7 +212,7 @@ void KinectSDKTracking::drawDepth()
 				else if (depth > maxDepth)
 					intensity = 255;
 				else
-					intensity = (depth * 256) / maxDepth;
+					intensity = ((depth) * 256) / (maxDepth);
 
 				*(dataIterator++) = intensity;
 				*(dataIterator++) = intensity;

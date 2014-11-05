@@ -14,8 +14,11 @@ public:
 	virtual void draw();
 	virtual void close();
 
+	void drawDepth();
+
 public slots:
 	void startVideo();
+	void startDepth();
 	void stopTracking();
 
 protected:
@@ -24,17 +27,20 @@ protected:
 private:
 	static const char* methodName;
 
+	bool initColor();
+	bool initDepth();
 	void createButtons();
 
 	openni::RGB888Pixel* texMap;
-	unsigned int texMapX;
-	unsigned int texMapY;
 
-	int colorWidth;
-	int colorHeight;
+	int streamWidth;
+	int streamHeight;
 
 	openni::Device device;
 	openni::VideoStream color;
+	openni::VideoStream depth;
+	
+	openni::VideoFrameRef depthFrame;
 	openni::VideoFrameRef colorFrame;
 	
 };

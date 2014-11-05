@@ -24,6 +24,9 @@ protected:
 	QString name;
 	QList<QPushButton *> options;
 
+	enum TYPES_OF_STREAM { COLOR = 1, DEPTH = 2 };
+	TYPES_OF_STREAM streamType;
+
 	bool isRunning;
 };
 
