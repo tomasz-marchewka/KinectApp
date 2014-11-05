@@ -103,25 +103,16 @@ void OpenNITracking::draw()
 	color.readFrame(&colorFrame);
 	if (colorFrame.isValid())
 	{
-		const openni::RGB888Pixel* pImageRow = (const openni::RGB888Pixel*)colorFrame.getData();
-		openni::RGB888Pixel* pTexRow = texMap + colorFrame.getCropOriginY() * texMapX;
-		int rowSize = colorFrame.getStrideInBytes() / sizeof(openni::RGB888Pixel);
-
-		for (int y = 0; y < colorFrame.getHeight(); ++y)
+		texMapX = colorFrame.getWidth();
+		texMapY = colorFrame.getHeight();
+		int size = texMapX * texMapY;
+		const openni::RGB888Pixel* source = reinterpret_cast<const openni::RGB888Pixel*>(colorFrame.getData());
+		for (int i = 0; i < size; i++)
 		{
-			const openni::RGB888Pixel* pImage = pImageRow;
-			openni::RGB888Pixel* pTex = pTexRow + colorFrame.getCropOriginX();
-
-			for (int x = 0; x < colorFrame.getWidth(); ++x, ++pImage, ++pTex)
-			{
-				*pTex = *pImage;
-			}
-
-			pImageRow += rowSize;
-			pTexRow += texMapX;
+			*(texMap + i) = *(source + i);
 		}
+		
 	}
-
 	display->setImage(texMapX, texMapY, texMap);
 }
 

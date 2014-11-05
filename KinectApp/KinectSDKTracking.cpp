@@ -206,7 +206,6 @@ void KinectSDKTracking::drawDepth()
 			{
 				int depth = currPixel->depth;
 
-				//unsigned char intensity = static_cast<unsigned char>(depth >= minDepth && depth <= maxDepth ? depth % 256 : 0);
 				unsigned char intensity;
 				if (depth < minDepth)
 					intensity = 0;

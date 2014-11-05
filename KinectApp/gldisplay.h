@@ -14,7 +14,7 @@ public:
 	void drawImage();
 	void drawShape();
 
-	void setImage(GLsizei width, GLsizei height, GLvoid *data);
+	void setImage(GLsizei width, GLsizei height, const GLvoid *data);
 
 public slots:
 	void setXRotation(int angle);
@@ -49,7 +49,7 @@ private:
 
 	QPoint lastPos;
 
-	GLvoid *texData;
+	const GLvoid *texData;
 	GLsizei texWidth;
 	GLsizei texHeight;
 	

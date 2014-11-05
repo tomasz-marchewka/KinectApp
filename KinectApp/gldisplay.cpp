@@ -241,7 +241,7 @@ void GLDisplay::drawImage()
 
 }
 
-void GLDisplay::setImage(GLsizei width, GLsizei height, GLvoid *data)
+void GLDisplay::setImage(GLsizei width, GLsizei height, const GLvoid *data)
 {
 	texWidth = width;
 	texHeight = height;
