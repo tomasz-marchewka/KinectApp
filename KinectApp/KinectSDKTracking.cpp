@@ -30,7 +30,11 @@ void KinectSDKTracking::createButtons()
 	QPushButton* stopButton = new QPushButton("Stop video");
 	connect(stopButton, SIGNAL(clicked()), SLOT(stopVideo()));
 
-	options << startButton << stopButton;
+	//start depth button
+	QPushButton* startDepthButton = new QPushButton("Start depth");
+	connect(startDepthButton, SIGNAL(clicked()), SLOT(startDepth()));
+
+	options << startButton << stopButton << startDepthButton;
 }
 
 bool KinectSDKTracking::init()
@@ -38,6 +42,7 @@ bool KinectSDKTracking::init()
 	int numSensors = 0;
 	long status;
 
+	logger.log("KinectSDK initializing...");
 	status = NuiGetSensorCount(&numSensors);
 	if (status != S_OK)
 	{
@@ -84,14 +89,19 @@ bool KinectSDKTracking::init()
 		return false;
 	}
 
-	
 	data = new unsigned char[videoResolution.getWidth() * videoResolution.getHeight() * 3]; //multiply by 3 because we use rgb (3 bytes)
 	return true;
 }
 
 void KinectSDKTracking::startVideo()
 {
-	isRunning = true;
+	streamType = COLOR;
+	QThread::start();
+}
+
+void KinectSDKTracking::startDepth()
+{
+	streamType = DEPTH;
 	QThread::start();
 }
 
@@ -102,12 +112,27 @@ void KinectSDKTracking::stopVideo()
 
 void KinectSDKTracking::run()
 {
+	isRunning = true;
+	logger.log("KinectSDK thread is running...");
 	if (init())
 	{
-		logger.log("KinectSDK thread is running...");
-		while (isRunning)
+		switch (streamType)
 		{
-			draw();
+		case KinectSDKTracking::COLOR:
+			while (isRunning)
+			{
+				draw();
+			}
+			break;
+		case KinectSDKTracking::DEPTH:
+			while (isRunning)
+			{
+				drawDepth();
+			}
+			break;
+		default:
+			logger.log("Don't select stream type!");
+			break;
 		}
 		memset(data, 0, videoResolution.getWidth() * videoResolution.getHeight() * 3);
 	}
@@ -119,6 +144,7 @@ void KinectSDKTracking::run()
 	{
 		sensor->NuiShutdown();
 	}
+	isRunning = false;
 	logger.log("KinectSDK thread is stoped");
 }
 
@@ -136,8 +162,8 @@ void KinectSDKTracking::draw()
 
 	if (lockedRect.Pitch != 0)
 	{
-		const BYTE* curr = (const BYTE*)lockedRect.pBits;
-		const BYTE* dataEnd = curr + (videoResolution.getWidth() * videoResolution.getHeight() * 4);
+		const unsigned char* curr = (const unsigned char*)lockedRect.pBits;
+		const unsigned char* dataEnd = curr + (videoResolution.getWidth() * videoResolution.getHeight() * 4);
 		for (int i = 0, j = 0; i < lockedRect.size; i+=4, j +=3) 
 		{
 			*(data + j) = *(curr + i + 2);
@@ -147,6 +173,60 @@ void KinectSDKTracking::draw()
 	}
 	texture->UnlockRect(0);
 	sensor->NuiImageStreamReleaseFrame(rgbStream, &imageFrame);
+
+	display->setImage(videoResolution.getWidth(), videoResolution.getHeight(), data);
+}
+
+void KinectSDKTracking::drawDepth()
+{
+	NUI_IMAGE_FRAME imageFrame;
+	INuiFrameTexture* texture;
+	int nearMode;
+
+	if (sensor->NuiImageStreamGetNextFrame(depthStream, 0, &imageFrame) < 0)
+	{
+		return;
+	}
+
+	if (!(sensor->NuiImageFrameGetDepthImagePixelFrameTexture(depthStream, &imageFrame, &nearMode, &texture) < 0))
+	{
+		NUI_LOCKED_RECT lockedRect;
+		texture->LockRect(0, &lockedRect, NULL, 0);
+
+		if (lockedRect.Pitch != 0)
+		{
+			int minDepth = (nearMode ? NUI_IMAGE_DEPTH_MINIMUM_NEAR_MODE : NUI_IMAGE_DEPTH_MINIMUM) >> NUI_IMAGE_PLAYER_INDEX_SHIFT;
+			int maxDepth = (nearMode ? NUI_IMAGE_DEPTH_MAXIMUM_NEAR_MODE : NUI_IMAGE_DEPTH_MAXIMUM) >> NUI_IMAGE_PLAYER_INDEX_SHIFT;
+
+			unsigned char* dataIterator = data;
+			const NUI_DEPTH_IMAGE_PIXEL* currPixel = reinterpret_cast<const NUI_DEPTH_IMAGE_PIXEL*>(lockedRect.pBits);
+			const NUI_DEPTH_IMAGE_PIXEL* endPixel = currPixel + (videoResolution.getWidth() * videoResolution.getHeight());
+
+			while (currPixel < endPixel)
+			{
+				int depth = currPixel->depth;
+
+				//unsigned char intensity = static_cast<unsigned char>(depth >= minDepth && depth <= maxDepth ? depth % 256 : 0);
+				unsigned char intensity;
+				if (depth < minDepth)
+					intensity = 0;
+				else if (depth > maxDepth)
+					intensity = 255;
+				else
+					intensity = (depth * 256) / maxDepth;
+
+				*(dataIterator++) = intensity;
+				*(dataIterator++) = intensity;
+				*(dataIterator++) = intensity;
+
+				++currPixel;
+			}
+		}
+		texture->UnlockRect(0);
+		texture->Release();
+	}
+
+	sensor->NuiImageStreamReleaseFrame(depthStream, &imageFrame);
 
 	display->setImage(videoResolution.getWidth(), videoResolution.getHeight(), data);
 }

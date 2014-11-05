@@ -15,9 +15,11 @@ public:
 	virtual bool init();
 	virtual void draw();
 	virtual void close();
+	void drawDepth();
 
 public slots:
 	void startVideo();
+	void startDepth();
 	void stopVideo();
 
 protected:
@@ -25,6 +27,9 @@ protected:
 
 private:
 	static const char* methodName;
+
+	enum TYPES_OF_STREAM {COLOR = 1, DEPTH = 2};
+	TYPES_OF_STREAM streamType;
 
 	unsigned char* data;
 	unsigned int textureId;

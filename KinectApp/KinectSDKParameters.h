@@ -24,6 +24,9 @@ public:
 		case NUI_IMAGE_RESOLUTION_1280x960:
 			return instance4;
 			break;
+		default:
+			return instance3;
+			break;
 		}
 	}
 
