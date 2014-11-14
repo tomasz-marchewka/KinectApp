@@ -19,17 +19,20 @@ OpenNITracking::~OpenNITracking()
 void OpenNITracking::createButtons()
 {
 	//start button
-	QPushButton* startButton = new QPushButton("Start");
-	connect(startButton, SIGNAL(clicked()), SLOT(startVideo()));
+	QPushButton* startColorButton = new QPushButton("Start color");
+	connect(startColorButton, SIGNAL(clicked()), SLOT(startVideo()));
 	//start depth button
 	QPushButton* startDepthButton = new QPushButton("Start depth");
 	connect(startDepthButton, SIGNAL(clicked()), SLOT(startDepth()));
+	//start ir button
+	QPushButton* startIrButton = new QPushButton("Start ir");
+	connect(startIrButton, SIGNAL(clicked()), SLOT(startIr()));
 
 	//stop button 
 	QPushButton* stopButton = new QPushButton("Stop");
 	connect(stopButton, SIGNAL(clicked()), SLOT(stopTracking()));
 
-	options  << startButton << startDepthButton << stopButton;
+	options  << startColorButton << startDepthButton << startIrButton<< stopButton;
 }
 
 bool OpenNITracking::init()
@@ -166,6 +169,58 @@ bool OpenNITracking::initDepth()
 	return false;
 }
 
+bool OpenNITracking::initIr()
+{
+	if (init())
+	{
+		openni::Status status = openni::STATUS_OK;
+		QString message;
+
+		status = ir.create(device, openni::SENSOR_IR);
+		if (status != openni::STATUS_OK)
+		{
+			message = "Couldn't find infrared stream\n";
+			message += openni::OpenNI::getExtendedError();
+			logger.log(message);
+			openni::OpenNI::shutdown();
+			logger.log("OpenNI shutdown");
+			return false;
+		}
+
+		status = ir.start();
+		if (status != openni::STATUS_OK)
+		{
+			message = "Couldn't start infrared stream\n";
+			message += openni::OpenNI::getExtendedError();
+			logger.log(message);
+			depth.destroy();
+			openni::OpenNI::shutdown();
+			logger.log("OpenNI shutdown");
+			return false;
+		}
+
+		if (!ir.isValid())
+		{
+			message = "Infrared stream is invalid\n";
+			message += openni::OpenNI::getExtendedError();
+			logger.log(message);
+			depth.destroy();
+			openni::OpenNI::shutdown();
+			logger.log("OpenNI shutdown");
+			return false;
+		}
+		openni::VideoMode irVideoMode = ir.getVideoMode();
+		streamWidth = irVideoMode.getResolutionX();
+		streamHeight = irVideoMode.getResolutionY();
+
+		texMap = new openni::RGB888Pixel[streamHeight * streamWidth];
+
+		logger.log("Infrared stream initialized succesful");
+		return true;
+	}
+	return false;
+}
+
 void OpenNITracking::draw()
 {
 	color.readFrame(&colorFrame);
@@ -194,7 +249,6 @@ void OpenNITracking::drawDepth()
 		streamHeight = depthFrame.getHeight();
 		int size = streamWidth * streamHeight * 3;
 		//int size = depthFrame.getDataSize();
-		int test = sizeof(openni::RGB888Pixel);
 		unsigned char* iterator = (unsigned char*)texMap;
 		const openni::DepthPixel* source = reinterpret_cast<const openni::DepthPixel*>(depthFrame.getData());
 
@@ -209,6 +263,27 @@ void OpenNITracking::drawDepth()
 	display->setImage(streamWidth, streamHeight, texMap);
 }
 
+void OpenNITracking::drawIr()
+{
+	ir.readFrame(&irFrame);
+	if (irFrame.isValid())
+	{
+		streamWidth = irFrame.getWidth();
+		streamHeight = irFrame.getHeight();
+		int size = streamWidth * streamHeight * 3;
+		unsigned char* iterator = (unsigned char*)texMap;
+		const unsigned char* source = reinterpret_cast<const unsigned char*>(irFrame.getData());
+
+		for (int i = 0, j = 0; i < size; i += 3, j++)
+		{
+			*(iterator + i) = *(source + j);
+			*(iterator + i + 1) = *(source + j);
+			*(iterator + i + 2) = *(source + j);
+		}
+	}
+	display->setImage(streamWidth, streamHeight, texMap);
+}
+
 void OpenNITracking::startVideo()
 {
 	streamType = COLOR;
@@ -218,6 +293,12 @@ void OpenNITracking::startVideo()
 void OpenNITracking::startDepth()
 {
 	streamType = DEPTH;
+	QThread::start();
+}
+
+void OpenNITracking::startIr()
+{
+	streamType = IR;
 	QThread::start();
 }
 
@@ -248,6 +329,15 @@ void OpenNITracking::run()
 				drawDepth();
 			memset(texMap, 0, streamWidth*streamHeight*sizeof(openni::RGB888Pixel));
 			depth.destroy();
+		}
+		break;
+	case TrackingMethod::IR:
+		if (initIr())
+		{
+			while (isRunning)
+				drawIr();
+			memset(texMap, 0, streamWidth*streamHeight*sizeof(openni::RGB888Pixel));
+			ir.destroy();
 		}
 		break;
 	default:

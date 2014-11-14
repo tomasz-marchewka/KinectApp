@@ -15,10 +15,12 @@ public:
 	virtual void close();
 
 	void drawDepth();
+	void drawIr();
 
 public slots:
 	void startVideo();
 	void startDepth();
+	void startIr();
 	void stopTracking();
 
 protected:
@@ -29,6 +31,7 @@ private:
 
 	bool initColor();
 	bool initDepth();
+	bool initIr();
 	void createButtons();
 
 	openni::RGB888Pixel* texMap;
@@ -39,9 +42,11 @@ private:
 	openni::Device device;
 	openni::VideoStream color;
 	openni::VideoStream depth;
+	openni::VideoStream ir;
 	
 	openni::VideoFrameRef depthFrame;
 	openni::VideoFrameRef colorFrame;
+	openni::VideoFrameRef irFrame;
 	
 };
 
