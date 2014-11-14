@@ -3,6 +3,7 @@
 
 static Logger &logger = Logger::getInstance();
 const char* OpenNITracking::methodName = "OpenNI";
+const int OPENNI_DEPTH_LEVEL = 10000;
 
 OpenNITracking::OpenNITracking(GLDisplay *display) : TrackingMethod(QString(methodName), display)
 {
@@ -25,7 +26,7 @@ void OpenNITracking::createButtons()
 	QPushButton* startDepthButton = new QPushButton("Start depth");
 	connect(startDepthButton, SIGNAL(clicked()), SLOT(startDepth()));
 	//start ir button
-	QPushButton* startIrButton = new QPushButton("Start ir");
+	QPushButton* startIrButton = new QPushButton("Start infrared");
 	connect(startIrButton, SIGNAL(clicked()), SLOT(startIr()));
 
 	//stop button 
@@ -65,17 +66,17 @@ bool OpenNITracking::init()
 	return true;
 }
 
-bool OpenNITracking::initColor()
+bool OpenNITracking::initStream(openni::SensorType sensorType, QString sensorName)
 {
 	if (init())
 	{
 		openni::Status status = openni::STATUS_OK;
 		QString message;
 
-		status = color.create(device, openni::SENSOR_COLOR);
+		status = videoStream.create(device, sensorType);
 		if (status != openni::STATUS_OK)
 		{
-			message = "Couldn't find color stream\n";
+			message = "Couldn't find " + sensorName + " stream.\n";
 			message += openni::OpenNI::getExtendedError();
 			logger.log(message);
 			openni::OpenNI::shutdown();
@@ -83,139 +84,35 @@ bool OpenNITracking::initColor()
 			return false;
 		}
 
-		status = color.start();
+		status = videoStream.start();
 		if (status != openni::STATUS_OK)
 		{
-			message = "Couldn't start color stream\n";
+			message = "Couldn't start " + sensorName + " stream\n";
 			message += openni::OpenNI::getExtendedError();
 			logger.log(message);
-			color.destroy();
+			videoStream.destroy();
 			openni::OpenNI::shutdown();
 			logger.log("OpenNI shutdown");
 			return false;
 		}
 
-		if (!color.isValid())
+		if (!videoStream.isValid())
 		{
-			message = "Color stream is invalid\n";
+			message = sensorName + " stream is invalid\n";
 			message += openni::OpenNI::getExtendedError();
 			logger.log(message);
-			color.destroy();
+			videoStream.destroy();
 			openni::OpenNI::shutdown();
 			logger.log("OpenNI shutdown");
 			return false;
 		}
-		openni::VideoMode colorVideoMode = color.getVideoMode();
-		streamWidth = colorVideoMode.getResolutionX();
-		streamHeight = colorVideoMode.getResolutionY();
+		openni::VideoMode videoMode = videoStream.getVideoMode();
+		streamWidth = videoMode.getResolutionX();
+		streamHeight = videoMode.getResolutionY();
 
 		texMap = new openni::RGB888Pixel[streamWidth * streamHeight];
-		
-		logger.log("Color stream initialized succesful");
-		return true;
-	}
-	return false;
-}
 
-bool OpenNITracking::initDepth()
-{
-	if (init())
-	{
-		openni::Status status = openni::STATUS_OK;
-		QString message;
-
-		status = depth.create(device, openni::SENSOR_DEPTH);
-		if (status != openni::STATUS_OK)
-		{
-			message = "Couldn't find depth stream\n";
-			message += openni::OpenNI::getExtendedError();
-			logger.log(message);
-			openni::OpenNI::shutdown();
-			logger.log("OpenNI shutdown");
-			return false;
-		}
-
-		status = depth.start();
-		if (status != openni::STATUS_OK)
-		{
-			message = "Couldn't start depth stream\n";
-			message += openni::OpenNI::getExtendedError();
-			logger.log(message);
-			depth.destroy();
-			openni::OpenNI::shutdown();
-			logger.log("OpenNI shutdown");
-			return false;
-		}
-
-		if (!depth.isValid())
-		{
-			message = "Depth stream is invalid\n";
-			message += openni::OpenNI::getExtendedError();
-			logger.log(message);
-			depth.destroy();
-			openni::OpenNI::shutdown();
-			logger.log("OpenNI shutdown");
-			return false;
-		}
-		openni::VideoMode depthVideoMode = depth.getVideoMode();
-		streamWidth = depthVideoMode.getResolutionX();
-		streamHeight = depthVideoMode.getResolutionY();
-
-		texMap = new openni::RGB888Pixel[streamHeight * streamWidth];
-
-		logger.log("Depth stream initialized succesful");
-		return true;
-	}
-	return false;
-}
-
-bool OpenNITracking::initIr()
-{
-	if (init())
-	{
-		openni::Status status = openni::STATUS_OK;
-		QString message;
-
-		status = ir.create(device, openni::SENSOR_IR);
-		if (status != openni::STATUS_OK)
-		{
-			message = "Couldn't find infrared stream\n";
-			message += openni::OpenNI::getExtendedError();
-			logger.log(message);
-			openni::OpenNI::shutdown();
-			logger.log("OpenNI shutdown");
-			return false;
-		}
-
-		status = ir.start();
-		if (status != openni::STATUS_OK)
-		{
-			message = "Couldn't start infrared stream\n";
-			message += openni::OpenNI::getExtendedError();
-			logger.log(message);
-			depth.destroy();
-			openni::OpenNI::shutdown();
-			logger.log("OpenNI shutdown");
-			return false;
-		}
-
-		if (!ir.isValid())
-		{
-			message = "Infrared stream is invalid\n";
-			message += openni::OpenNI::getExtendedError();
-			logger.log(message);
-			depth.destroy();
-			openni::OpenNI::shutdown();
-			logger.log("OpenNI shutdown");
-			return false;
-		}
-		openni::VideoMode irVideoMode = ir.getVideoMode();
-		streamWidth = irVideoMode.getResolutionX();
-		streamHeight = irVideoMode.getResolutionY();
-
-		texMap = new openni::RGB888Pixel[streamHeight * streamWidth];
-
-		logger.log("Infrared stream initialized succesful");
+		logger.log(sensorName + " stream initialized succesful");
 		return true;
 	}
 	return false;
@@ -223,38 +120,29 @@ bool OpenNITracking::initIr()
 
 void OpenNITracking::draw()
 {
-	color.readFrame(&colorFrame);
-	if (colorFrame.isValid())
+	videoStream.readFrame(&videoFrame);
+	if (videoFrame.isValid())
 	{
-		streamWidth = colorFrame.getWidth();
-		streamHeight = colorFrame.getHeight();
-		int size = streamWidth * streamHeight;
-		const openni::RGB888Pixel* source = reinterpret_cast<const openni::RGB888Pixel*>(colorFrame.getData());
-
-		for (int i = 0; i < size; i++)
-		{
-			*(texMap + i) = *(source + i);
-		}
-		
+		memcpy(texMap, videoFrame.getData(), videoFrame.getDataSize());
 	}
 	display->setImage(streamWidth, streamHeight, texMap);
 }
 
 void OpenNITracking::drawDepth()
 {
-	depth.readFrame(&depthFrame);
-	if (depthFrame.isValid())
+	videoStream.readFrame(&videoFrame);
+	if (videoFrame.isValid())
 	{
-		streamWidth = depthFrame.getWidth();
-		streamHeight = depthFrame.getHeight();
+		streamWidth = videoFrame.getWidth();
+		streamHeight = videoFrame.getHeight();
 		int size = streamWidth * streamHeight * 3;
-		//int size = depthFrame.getDataSize();
+
 		unsigned char* iterator = (unsigned char*)texMap;
-		const openni::DepthPixel* source = reinterpret_cast<const openni::DepthPixel*>(depthFrame.getData());
+		const openni::DepthPixel* source = reinterpret_cast<const openni::DepthPixel*>(videoFrame.getData());
 
 		for (int i = 0, j = 0; i < size; i+=3, j++)
 		{
-			unsigned char intensity = (*(source + j) * 256) / 10000;
+			unsigned char intensity = (*(source + j) * 256) / OPENNI_DEPTH_LEVEL;
 			*(iterator + i) = intensity;
 			*(iterator + i + 1) = intensity;
 			*(iterator + i + 2) = intensity;
@@ -265,19 +153,19 @@ void OpenNITracking::drawDepth()
 
 void OpenNITracking::drawIr()
 {
-	ir.readFrame(&irFrame);
-	if (irFrame.isValid())
+	videoStream.readFrame(&videoFrame);
+	if (videoFrame.isValid())
 	{
-		streamWidth = irFrame.getWidth();
-		streamHeight = irFrame.getHeight();
+		streamWidth = videoFrame.getWidth();
+		streamHeight = videoFrame.getHeight();
 		int size = streamWidth * streamHeight * 3;
 		unsigned char* iterator = (unsigned char*)texMap;
-		const unsigned char* source = reinterpret_cast<const unsigned char*>(irFrame.getData());
+		const unsigned char* source = reinterpret_cast<const unsigned char*>(videoFrame.getData());
 
 		for (int i = 0, j = 0; i < size; i += 3, j++)
 		{
 			*(iterator + i) = *(source + j);
-			*(iterator + i + 1) = *(source + j);
+			*(iterator + i + 1) = *(source + j);   
 			*(iterator + i + 2) = *(source + j);
 		}
 	}
@@ -314,36 +202,33 @@ void OpenNITracking::run()
 	switch (streamType)
 	{
 	case TrackingMethod::COLOR:
-		if (initColor())
+		if (initStream(openni::SENSOR_COLOR, "color"))
 		{
 			while (isRunning)
 				draw();
 			memset(texMap, 0, streamWidth*streamHeight*sizeof(openni::RGB888Pixel));
-			color.destroy();
 		}
 		break;
 	case TrackingMethod::DEPTH:
-		if (initDepth())
+		if (initStream(openni::SENSOR_DEPTH, "depth"))
 		{
 			while (isRunning)
 				drawDepth();
 			memset(texMap, 0, streamWidth*streamHeight*sizeof(openni::RGB888Pixel));
-			depth.destroy();
 		}
 		break;
 	case TrackingMethod::IR:
-		if (initIr())
+		if (initStream(openni::SENSOR_IR, "infrared"))
 		{
 			while (isRunning)
 				drawIr();
 			memset(texMap, 0, streamWidth*streamHeight*sizeof(openni::RGB888Pixel));
-			ir.destroy();
 		}
 		break;
 	default:
 		break;
 	}
-	
+	videoStream.destroy();
 	device.close();
 	openni::OpenNI::shutdown();
 	logger.log("OpenNI thread is stoped");

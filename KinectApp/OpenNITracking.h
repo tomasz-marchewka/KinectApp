@@ -29,9 +29,7 @@ protected:
 private:
 	static const char* methodName;
 
-	bool initColor();
-	bool initDepth();
-	bool initIr();
+	bool initStream(openni::SensorType sensorType, QString sensorName);
 	void createButtons();
 
 	openni::RGB888Pixel* texMap;
@@ -40,13 +38,8 @@ private:
 	int streamHeight;
 
 	openni::Device device;
-	openni::VideoStream color;
-	openni::VideoStream depth;
-	openni::VideoStream ir;
-	
-	openni::VideoFrameRef depthFrame;
-	openni::VideoFrameRef colorFrame;
-	openni::VideoFrameRef irFrame;
+	openni::VideoStream videoStream;
+	openni::VideoFrameRef videoFrame;
 	
 };
 

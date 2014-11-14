@@ -16,22 +16,26 @@ public:
 	virtual void draw();
 	virtual void close();
 	void drawDepth();
+	void drawIr();
 
 public slots:
 	void startVideo();
 	void startDepth();
+	void startIr();
 	void stopVideo();
 
 protected:
 	void run();
 
 private:
+	bool initSensor(NUI_IMAGE_TYPE sensorType, QString sensorName);
+
 	static const char* methodName;
 
 	unsigned char* data;
 	unsigned int textureId;
-	void* rgbStream;
-	void* depthStream;
+
+	void* stream;
 	INuiSensor* sensor;
 
 	void createButtons();
