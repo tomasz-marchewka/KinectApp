@@ -15,15 +15,18 @@ public:
 	virtual bool init();
 	virtual void draw();
 	virtual void close();
+
 	void drawDepth();
 	void drawIr();
 	void drawSkeleton();
+	void draw3dPoints();
 
 public slots:
 	void startVideo();
 	void startDepth();
 	void startIr();
 	void startSkeletonTracking();
+	void start3dPoints();
 	void stop();
 
 protected:

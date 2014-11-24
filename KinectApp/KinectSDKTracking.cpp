@@ -9,10 +9,11 @@ const char* KinectSDKTracking::methodName = "KinectSDK";
 
 KinectSDKTracking::KinectSDKTracking(GLDisplay* display) : TrackingMethod(methodName, display)
 {
-	data3D = NULL;
-	data = NULL;
 	sensor = NULL;
+	data = new unsigned char[videoResolution.getWidth() * videoResolution.getHeight() * 3]; //multiply by 3 because we use rgb (3 bytes)
+	data3D = new float[videoResolution.getWidth() * videoResolution.getHeight() * 6];
 	createButtons();
+
 }
 
 
@@ -39,14 +40,14 @@ void KinectSDKTracking::createButtons()
 	connect(startIrButton, SIGNAL(clicked()), SLOT(startIr()));
 
 	//start skeleton tracking button
-	QPushButton* startSkeletonButton = new QPushButton("Start skeleton tracking");
-	connect(startSkeletonButton, SIGNAL(clicked()), SLOT(startSkeletonTracking()));
+	QPushButton* start3dPoints = new QPushButton("Start 3d ");
+	connect(start3dPoints, SIGNAL(clicked()), SLOT(start3dPoints()));
 
 	//stop button 
 	QPushButton* stopButton = new QPushButton("Stop");
 	connect(stopButton, SIGNAL(clicked()), SLOT(stop()));
 
-	options << startButton << startDepthButton << startIrButton  << startSkeletonButton << stopButton;
+	options << startButton << startDepthButton << startIrButton  << start3dPoints << stopButton;
 }
 
 bool KinectSDKTracking::init()
@@ -99,8 +100,7 @@ bool KinectSDKTracking::initSensor(NUI_IMAGE_TYPE sensorType, QString sensorName
 			logger.log(QString::number(status));
 			return false;
 		}
-		data = new unsigned char[videoResolution.getWidth() * videoResolution.getHeight() * 3]; //multiply by 3 because we use rgb (3 bytes)
-		data3D = new float[videoResolution.getWidth() * videoResolution.getHeight() * 4];
+		
 		return true;
 	}
 	return false;
@@ -127,6 +127,12 @@ void KinectSDKTracking::startIr()
 void KinectSDKTracking::startSkeletonTracking()
 {
 	streamType = SKELETON;
+	QThread::start();
+}
+
+void KinectSDKTracking::start3dPoints()
+{
+	streamType = POINTS_3D;
 	QThread::start();
 }
 
@@ -172,6 +178,16 @@ void KinectSDKTracking::run()
 			while (isRunning)
 				drawSkeleton();
 		}
+		break;
+	case TrackingMethod::POINTS_3D:
+		if (initSensor(NUI_IMAGE_TYPE_DEPTH, "depth"))
+		{
+			logger.log("3d initialized successfull.");
+			while (isRunning)
+				draw3dPoints();
+			memset(data3D, 0, sizeof(float)* videoResolution.getWidth() * videoResolution.getHeight() * 6);
+		}
+		break;
 	default:
 		break;
 	}
@@ -266,59 +282,63 @@ void KinectSDKTracking::drawDepth()
 	display->setImage(videoResolution.getWidth(), videoResolution.getHeight(), data);
 }
 
-//void KinectSDKTracking::drawDepth()
-//{
-//	NUI_IMAGE_FRAME imageFrame;
-//	INuiFrameTexture* texture;
-//	int nearMode;
-//
-//	if (sensor->NuiImageStreamGetNextFrame(stream, 0, &imageFrame) < 0)
-//	{
-//		return;
-//	}
-//
-//	if (!(sensor->NuiImageFrameGetDepthImagePixelFrameTexture(stream, &imageFrame, &nearMode, &texture) < 0))
-//	{
-//		NUI_LOCKED_RECT lockedRect;
-//		texture->LockRect(0, &lockedRect, NULL, 0);
-//
-//		if (lockedRect.Pitch != 0)
-//		{
-//			int minDepth = (nearMode ? NUI_IMAGE_DEPTH_MINIMUM_NEAR_MODE : NUI_IMAGE_DEPTH_MINIMUM) >> NUI_IMAGE_PLAYER_INDEX_SHIFT;
-//			int maxDepth = (nearMode ? NUI_IMAGE_DEPTH_MAXIMUM_NEAR_MODE : NUI_IMAGE_DEPTH_MAXIMUM) >> NUI_IMAGE_PLAYER_INDEX_SHIFT;
-//
-//			float* dataIterator = data3D;
-//			const NUI_DEPTH_IMAGE_PIXEL* currPixel = reinterpret_cast<const NUI_DEPTH_IMAGE_PIXEL*>(lockedRect.pBits);
-//			const NUI_DEPTH_IMAGE_PIXEL* endPixel = currPixel + (videoResolution.getWidth() * videoResolution.getHeight());
-//
-//			while (currPixel < endPixel)
-//			{
-//				int depth = currPixel->depth;
-//
-//				float intensity;
-//				if (depth < minDepth)
-//					intensity = minDepth / maxDepth;
-//				else if (depth > maxDepth)
-//					intensity = 1.0f;
-//				else
-//					intensity = depth / maxDepth;
-//
-//				*(dataIterator++) = intensity;
-//				*(dataIterator++) = intensity;
-//				*(dataIterator++) = intensity;
-//				*(dataIterator++) = intensity;
-//
-//				++currPixel;
-//			}
-//		}
-//		texture->UnlockRect(0);
-//		texture->Release();
-//	}
-//
-//	sensor->NuiImageStreamReleaseFrame(stream, &imageFrame);
-//
-//	display->setImage(videoResolution.getWidth(), videoResolution.getHeight(), data3D);
-//}
+void KinectSDKTracking::draw3dPoints()
+{
+	NUI_IMAGE_FRAME imageFrame;
+	INuiFrameTexture* texture;
+	int nearMode;
+
+	if (sensor->NuiImageStreamGetNextFrame(stream, 0, &imageFrame) < 0)
+	{
+		return;
+	}
+
+	if (!(sensor->NuiImageFrameGetDepthImagePixelFrameTexture(stream, &imageFrame, &nearMode, &texture) < 0))
+	{
+		NUI_LOCKED_RECT lockedRect;
+		texture->LockRect(0, &lockedRect, NULL, 0);
+
+		if (lockedRect.Pitch != 0)
+		{
+			int minDepth = (nearMode ? NUI_IMAGE_DEPTH_MINIMUM_NEAR_MODE : NUI_IMAGE_DEPTH_MINIMUM) >> NUI_IMAGE_PLAYER_INDEX_SHIFT;
+			int maxDepth = (nearMode ? NUI_IMAGE_DEPTH_MAXIMUM_NEAR_MODE : NUI_IMAGE_DEPTH_MAXIMUM) >> NUI_IMAGE_PLAYER_INDEX_SHIFT;
+
+			float* dataIterator = data3D;
+			const NUI_DEPTH_IMAGE_PIXEL* currPixel = reinterpret_cast<const NUI_DEPTH_IMAGE_PIXEL*>(lockedRect.pBits);
+			const NUI_DEPTH_IMAGE_PIXEL* endPixel = currPixel + (videoResolution.getWidth() * videoResolution.getHeight());
+			int x = videoResolution.getWidth();
+			int y = videoResolution.getHeight();
+			for (int i = 0; i < y; i++)
+			{
+				for (int j = 0; j < x; j++)
+				{
+					int numPix = j + i*x;
+					int depth = (currPixel + numPix)->depth;
+					float intensity;
+					if (depth < minDepth)
+						intensity = minDepth / maxDepth;
+					else if (depth > maxDepth)
+						intensity = 1.0f;
+					else
+						intensity = depth / (float)maxDepth;
+
+					*(dataIterator++) = intensity;
+					*(dataIterator++) = intensity;
+					*(dataIterator++) = intensity;
+					*(dataIterator++) = (2.0f * j / x) - 1.0f;
+					*(dataIterator++) = -(2.0f * i / y) + 1.0f;
+					*(dataIterator++) = -intensity;
+				}
+			}
+		}
+		texture->UnlockRect(0);
+		texture->Release();
+	}
+
+	sensor->NuiImageStreamReleaseFrame(stream, &imageFrame);
+
+	display->setData3D(videoResolution.getWidth(), videoResolution.getHeight(), data3D);
+}
 
 void KinectSDKTracking::drawIr()
 {

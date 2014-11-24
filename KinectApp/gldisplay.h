@@ -27,6 +27,7 @@ public slots:
 	void setZRotation(int angle);
 	void setScale(double scale);
 	void update();
+	void resetRotation();
 
 signals:
 	void xRotationChanged(int angle);

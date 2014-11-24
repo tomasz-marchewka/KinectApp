@@ -16,6 +16,7 @@ KinectApp::KinectApp(QWidget *parent)
 	
 	connect(ui.comboBox, SIGNAL(activated(int)), SLOT(selectMethod(int)));
 	connect(ui.checkBox, SIGNAL(stateChanged(int)), SLOT(showConsole(int)));
+	bool succes = connect(ui.resetButton, SIGNAL(clicked()), SLOT(resetButton()));
 	connect(&logger, SIGNAL(logMessage(QString)), SLOT(printOnConsole(QString)));
 
 	selectedMethod = NULL;
@@ -104,4 +105,9 @@ void KinectApp::showConsole(int state)
 void KinectApp::printOnConsole(QString message)
 {
 	ui.console->appendPlainText(message);
+}
+
+void KinectApp::resetButton()
+{
+	ui.glDisplay->resetRotation();
 }

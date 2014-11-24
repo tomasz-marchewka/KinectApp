@@ -32,6 +32,7 @@ GLDisplay::GLDisplay(QWidget *parent)
 	yRot = 0;
 	zRot = 0;
 	scale = 1.0;
+	lockRotation = false;
 	texData = NULL;
 	data3D = NULL;
 	QTimer *timer = new QTimer(this);
@@ -103,8 +104,8 @@ void GLDisplay::initializeGL()
 	//glEnable(GL_LIGHTING);
 	//glEnable(GL_LIGHT0);
 
-	static GLfloat lightPosition[4] = { 0, 0, 10, 1.0 };
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+	//static GLfloat lightPosition[4] = { 0, 0, 10, 1.0 };
+	//glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 }
 
 void GLDisplay::paintGL()
@@ -121,7 +122,11 @@ void GLDisplay::paintGL()
 	{
 		drawImage();
 	}
-
+	//drawSphere(-1.0, 1.0, 0.0, 0.1);
+	if (data3D != NULL)
+	{
+		drawPointCloud();
+	}
 
 }
 
@@ -199,7 +204,7 @@ void GLDisplay::setScale(double scale)
 void GLDisplay::drawImage()
 {
 	//	lockRotation = true;
-	glDisable(GL_LIGHTING);
+	//glDisable(GL_LIGHTING);
 	glEnable(GL_TEXTURE_2D);
 	glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -239,9 +244,32 @@ void GLDisplay::setData3D(GLsizei width, GLsizei height, const float *data)
 	texWidth = width;
 	texHeight = height;
 	data3D = data;
+	texData = NULL;
 }
 
 void GLDisplay::update()
 {
 	updateGL();
+}
+
+void GLDisplay::drawPointCloud()
+{
+	glDisable(GL_TEXTURE_2D);
+	glBegin(GL_POINTS); //starts drawing of points
+	for (int i = 0; i < texWidth * texHeight * 6; i+=6)
+	{
+		if (*(data3D + i) == 0.0f)
+			continue;
+		glColor3f(*(data3D + i), *(data3D + i + 1), *(data3D + i + 2));
+		glVertex3f(*(data3D + i + 3), *(data3D + i + 4), *(data3D + i + 5));
+	}
+	glEnd();//end drawing of points
+}
+
+void GLDisplay::resetRotation()
+{
+	xRot = 0;
+	yRot = 0;
+	zRot = 0;
+	scale = 1.0;
 }

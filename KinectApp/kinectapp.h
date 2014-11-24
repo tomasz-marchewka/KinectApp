@@ -19,6 +19,7 @@ public slots:
 	void selectMethod(int index);
 	void showConsole(int state);
 	void printOnConsole(QString message);
+	void resetButton();
 
 private:
 	Ui::KinectAppClass ui;
