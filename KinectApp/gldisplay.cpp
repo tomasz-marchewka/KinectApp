@@ -1,55 +1,39 @@
 #include "gldisplay.h"
 #include <QtOpenGL/QtOpenGL>
 #include <QtWidgets>
+#include <gl\GLU.h>
 
-//default draw function (drawing pyramid shape)
-void static draw()
+void GLDisplay::drawSphere(float x, float y, float z, float size)
 {
-	glBegin(GL_QUADS);
-	glNormal3f(0, 0, -1);
-	glVertex3f(-1, -1, 0);
-	glVertex3f(-1, 1, 0);
-	glVertex3f(1, 1, 0);
-	glVertex3f(1, -1, 0);
-	glEnd();
+	GLUquadricObj* Sphere = gluNewQuadric();
+	gluQuadricNormals(Sphere, GLU_SMOOTH);
+	//gluQuadricTexture(Sphere, GL_TRUE);
 
-	glBegin(GL_TRIANGLES);
-	glNormal3f(0, -1, 0.707);
-	glVertex3f(-1, -1, 0);
-	glVertex3f(1, -1, 0);
-	glVertex3f(0, 0, 1.2);
-	glEnd();
+	glTranslatef(x, y, z);
+	gluSphere(Sphere, size, 20, 20);
+	glTranslatef(-x, -y, -z);
+}
 
-	glBegin(GL_TRIANGLES);
-	glNormal3f(1, 0, 0.707);
-	glVertex3f(1, -1, 0);
-	glVertex3f(1, 1, 0);
-	glVertex3f(0, 0, 1.2);
-	glEnd();
-
-	glBegin(GL_TRIANGLES);
-	glNormal3f(0, 1, 0.707);
-	glVertex3f(1, 1, 0);
-	glVertex3f(-1, 1, 0);
-	glVertex3f(0, 0, 1.2);
-	glEnd();
-
-	glBegin(GL_TRIANGLES);
-	glNormal3f(-1, 0, 0.707);
-	glVertex3f(-1, 1, 0);
-	glVertex3f(-1, -1, 0);
-	glVertex3f(0, 0, 1.2);
-	glEnd();
+void GLDisplay::setDrawingColor(float r, float g, float b)
+{
+	glColor3f(r, g, b);
+}
+void GLDisplay::setDrawingColor(QColor color)
+{
+	int r, g, b;
+	color.getRgb(&r, &g, &b);
+	glColor3ub(r, g, b);
 }
 
 GLDisplay::GLDisplay(QWidget *parent)
-	: QGLWidget(parent)
+: QGLWidget(parent)
 {
 	xRot = 0;
 	yRot = 0;
 	zRot = 0;
 	scale = 1.0;
 	texData = NULL;
+	data3D = NULL;
 	QTimer *timer = new QTimer(this);
 	connect(timer, SIGNAL(timeout()), this, SLOT(update()));
 	timer->start(33);
@@ -116,8 +100,8 @@ void GLDisplay::initializeGL()
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glShadeModel(GL_SMOOTH);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
+	//glEnable(GL_LIGHTING);
+	//glEnable(GL_LIGHT0);
 
 	static GLfloat lightPosition[4] = { 0, 0, 10, 1.0 };
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
@@ -137,6 +121,8 @@ void GLDisplay::paintGL()
 	{
 		drawImage();
 	}
+
+
 }
 
 void GLDisplay::resizeGL(int width, int height)
@@ -212,7 +198,7 @@ void GLDisplay::setScale(double scale)
 
 void GLDisplay::drawImage()
 {
-	lockRotation = true;
+	//	lockRotation = true;
 	glDisable(GL_LIGHTING);
 	glEnable(GL_TEXTURE_2D);
 	glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
@@ -246,6 +232,13 @@ void GLDisplay::setImage(GLsizei width, GLsizei height, const GLvoid *data)
 	texWidth = width;
 	texHeight = height;
 	texData = data;
+}
+
+void GLDisplay::setData3D(GLsizei width, GLsizei height, const float *data)
+{
+	texWidth = width;
+	texHeight = height;
+	data3D = data;
 }
 
 void GLDisplay::update()

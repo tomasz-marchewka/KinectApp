@@ -9,6 +9,7 @@ const char* KinectSDKTracking::methodName = "KinectSDK";
 
 KinectSDKTracking::KinectSDKTracking(GLDisplay* display) : TrackingMethod(methodName, display)
 {
+	data3D = NULL;
 	data = NULL;
 	sensor = NULL;
 	createButtons();
@@ -18,6 +19,8 @@ KinectSDKTracking::KinectSDKTracking(GLDisplay* display) : TrackingMethod(method
 KinectSDKTracking::~KinectSDKTracking()
 {
 	delete data;
+	delete data3D;
+	data3D = NULL;
 	data = NULL;
 }
 
@@ -35,11 +38,15 @@ void KinectSDKTracking::createButtons()
 	QPushButton* startIrButton = new QPushButton("Start infrared");
 	connect(startIrButton, SIGNAL(clicked()), SLOT(startIr()));
 
+	//start skeleton tracking button
+	QPushButton* startSkeletonButton = new QPushButton("Start skeleton tracking");
+	connect(startSkeletonButton, SIGNAL(clicked()), SLOT(startSkeletonTracking()));
+
 	//stop button 
 	QPushButton* stopButton = new QPushButton("Stop");
-	connect(stopButton, SIGNAL(clicked()), SLOT(stopVideo()));
+	connect(stopButton, SIGNAL(clicked()), SLOT(stop()));
 
-	options << startButton << startDepthButton << startIrButton << stopButton;
+	options << startButton << startDepthButton << startIrButton  << startSkeletonButton << stopButton;
 }
 
 bool KinectSDKTracking::init()
@@ -70,7 +77,7 @@ bool KinectSDKTracking::init()
 		return false;
 	}
 
-	status = sensor->NuiInitialize(NUI_INITIALIZE_FLAG_USES_DEPTH | NUI_INITIALIZE_FLAG_USES_COLOR);
+	status = sensor->NuiInitialize(NUI_INITIALIZE_FLAG_USES_DEPTH | NUI_INITIALIZE_FLAG_USES_COLOR | NUI_INITIALIZE_FLAG_USES_SKELETON);
 	if (status != S_OK)
 	{
 		logger.log("Couldn't initialize nui!\nError code: ");
@@ -85,7 +92,7 @@ bool KinectSDKTracking::initSensor(NUI_IMAGE_TYPE sensorType, QString sensorName
 	if (init())
 	{
 		long status;
-		status = sensor->NuiImageStreamOpen(NUI_IMAGE_TYPE_COLOR, videoResolution.getResolutionType(), 0, 2, NULL, &stream);
+		status = sensor->NuiImageStreamOpen(sensorType, videoResolution.getResolutionType(), 0, 2, NULL, &stream);
 		if (status != S_OK)
 		{
 			logger.log("Couldn't open " + sensorName + " stream!\nError code: ");
@@ -93,6 +100,7 @@ bool KinectSDKTracking::initSensor(NUI_IMAGE_TYPE sensorType, QString sensorName
 			return false;
 		}
 		data = new unsigned char[videoResolution.getWidth() * videoResolution.getHeight() * 3]; //multiply by 3 because we use rgb (3 bytes)
+		data3D = new float[videoResolution.getWidth() * videoResolution.getHeight() * 4];
 		return true;
 	}
 	return false;
@@ -116,8 +124,14 @@ void KinectSDKTracking::startIr()
 	QThread::start();
 }
 
+void KinectSDKTracking::startSkeletonTracking()
+{
+	streamType = SKELETON;
+	QThread::start();
+}
 
-void KinectSDKTracking::stopVideo()
+
+void KinectSDKTracking::stop()
 {
 	isRunning = false;
 }
@@ -152,6 +166,12 @@ void KinectSDKTracking::run()
 			memset(data, 0, videoResolution.getWidth() * videoResolution.getHeight() * 3);
 		}
 		break;
+	case TrackingMethod::SKELETON:
+		if (init())
+		{
+			while (isRunning)
+				drawSkeleton();
+		}
 	default:
 		break;
 	}
@@ -246,6 +266,60 @@ void KinectSDKTracking::drawDepth()
 	display->setImage(videoResolution.getWidth(), videoResolution.getHeight(), data);
 }
 
+//void KinectSDKTracking::drawDepth()
+//{
+//	NUI_IMAGE_FRAME imageFrame;
+//	INuiFrameTexture* texture;
+//	int nearMode;
+//
+//	if (sensor->NuiImageStreamGetNextFrame(stream, 0, &imageFrame) < 0)
+//	{
+//		return;
+//	}
+//
+//	if (!(sensor->NuiImageFrameGetDepthImagePixelFrameTexture(stream, &imageFrame, &nearMode, &texture) < 0))
+//	{
+//		NUI_LOCKED_RECT lockedRect;
+//		texture->LockRect(0, &lockedRect, NULL, 0);
+//
+//		if (lockedRect.Pitch != 0)
+//		{
+//			int minDepth = (nearMode ? NUI_IMAGE_DEPTH_MINIMUM_NEAR_MODE : NUI_IMAGE_DEPTH_MINIMUM) >> NUI_IMAGE_PLAYER_INDEX_SHIFT;
+//			int maxDepth = (nearMode ? NUI_IMAGE_DEPTH_MAXIMUM_NEAR_MODE : NUI_IMAGE_DEPTH_MAXIMUM) >> NUI_IMAGE_PLAYER_INDEX_SHIFT;
+//
+//			float* dataIterator = data3D;
+//			const NUI_DEPTH_IMAGE_PIXEL* currPixel = reinterpret_cast<const NUI_DEPTH_IMAGE_PIXEL*>(lockedRect.pBits);
+//			const NUI_DEPTH_IMAGE_PIXEL* endPixel = currPixel + (videoResolution.getWidth() * videoResolution.getHeight());
+//
+//			while (currPixel < endPixel)
+//			{
+//				int depth = currPixel->depth;
+//
+//				float intensity;
+//				if (depth < minDepth)
+//					intensity = minDepth / maxDepth;
+//				else if (depth > maxDepth)
+//					intensity = 1.0f;
+//				else
+//					intensity = depth / maxDepth;
+//
+//				*(dataIterator++) = intensity;
+//				*(dataIterator++) = intensity;
+//				*(dataIterator++) = intensity;
+//				*(dataIterator++) = intensity;
+//
+//				++currPixel;
+//			}
+//		}
+//		texture->UnlockRect(0);
+//		texture->Release();
+//	}
+//
+//	sensor->NuiImageStreamReleaseFrame(stream, &imageFrame);
+//
+//	display->setImage(videoResolution.getWidth(), videoResolution.getHeight(), data3D);
+//}
+
 void KinectSDKTracking::drawIr()
 {
 	NUI_IMAGE_FRAME imageFrame;
@@ -275,6 +349,21 @@ void KinectSDKTracking::drawIr()
 	display->setImage(videoResolution.getWidth(), videoResolution.getHeight(), data);
 }
 
+void KinectSDKTracking::drawSkeleton()
+{
+	NUI_SKELETON_FRAME skeletonFrame = { 0 };
+	if (sensor->NuiSkeletonGetNextFrame(0, &skeletonFrame) < 0)
+	{
+		return;
+	}
+
+	NUI_SKELETON_TRACKING_STATE trackingState = skeletonFrame.SkeletonData[0].eTrackingState;
+	if (NUI_SKELETON_TRACKED == trackingState)
+	{
+		
+	}
+
+}
 
 void KinectSDKTracking::close()
 {

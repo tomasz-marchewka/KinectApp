@@ -17,12 +17,14 @@ public:
 	virtual void close();
 	void drawDepth();
 	void drawIr();
+	void drawSkeleton();
 
 public slots:
 	void startVideo();
 	void startDepth();
 	void startIr();
-	void stopVideo();
+	void startSkeletonTracking();
+	void stop();
 
 protected:
 	void run();
@@ -33,6 +35,7 @@ private:
 	static const char* methodName;
 
 	unsigned char* data;
+	float *data3D;
 	unsigned int textureId;
 
 	void* stream;

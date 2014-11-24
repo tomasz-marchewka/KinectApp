@@ -13,8 +13,6 @@ KinectApp::KinectApp(QWidget *parent)
 	ui.setupUi(this);
 	addTrackingMethod(new OpenNITracking(ui.glDisplay));
 	addTrackingMethod(new KinectSDKTracking(ui.glDisplay));
-	addTrackingMethod(new MockTracking(ui.glDisplay));
-	addTrackingMethod(new MockTracking("Test mock", ui.glDisplay));
 	
 	connect(ui.comboBox, SIGNAL(activated(int)), SLOT(selectMethod(int)));
 	connect(ui.checkBox, SIGNAL(stateChanged(int)), SLOT(showConsole(int)));

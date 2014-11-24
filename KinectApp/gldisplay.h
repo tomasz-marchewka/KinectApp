@@ -13,8 +13,13 @@ public:
 
 	void drawImage();
 	void drawShape();
+	void drawSphere(float x, float y, float z, float size);
+	void drawPointCloud();
+	void setDrawingColor(float r, float g, float b);
+	void setDrawingColor(QColor color);
 
 	void setImage(GLsizei width, GLsizei height, const GLvoid *data);
+	void setData3D(GLsizei width, GLsizei height, const float *data);
 
 public slots:
 	void setXRotation(int angle);
@@ -49,6 +54,7 @@ private:
 
 	QPoint lastPos;
 
+	const float *data3D;
 	const GLvoid *texData;
 	GLsizei texWidth;
 	GLsizei texHeight;
