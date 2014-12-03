@@ -16,11 +16,13 @@ public:
 
 	void drawDepth();
 	void drawIr();
+	void draw3dPoints();
 
 public slots:
 	void startVideo();
 	void startDepth();
 	void startIr();
+	void start3dPoints();
 	void stopTracking();
 
 protected:
@@ -33,6 +35,7 @@ private:
 	void createButtons();
 
 	openni::RGB888Pixel* texMap;
+	float *data3d;
 
 	int streamWidth;
 	int streamHeight;

@@ -34,7 +34,8 @@ GLDisplay::GLDisplay(QWidget *parent)
 	scale = 1.0;
 	lockRotation = false;
 	texData = NULL;
-	data3D = NULL;
+	pointsCloudData = NULL;
+	points = NULL;
 	QTimer *timer = new QTimer(this);
 	connect(timer, SIGNAL(timeout()), this, SLOT(update()));
 	timer->start(33);
@@ -123,10 +124,17 @@ void GLDisplay::paintGL()
 		drawImage();
 	}
 	//drawSphere(-1.0, 1.0, 0.0, 0.1);
-	if (data3D != NULL)
+	if (pointsCloudData != NULL)
 	{
 		drawPointCloud();
 	}
+
+	if (points != NULL)
+	{
+		drawPoints();
+	}
+
+
 
 }
 
@@ -239,11 +247,11 @@ void GLDisplay::setImage(GLsizei width, GLsizei height, const GLvoid *data)
 	texData = data;
 }
 
-void GLDisplay::setData3D(GLsizei width, GLsizei height, const float *data)
+void GLDisplay::setPointCloudData(GLsizei width, GLsizei height, const float *data)
 {
 	texWidth = width;
 	texHeight = height;
-	data3D = data;
+	pointsCloudData = data;
 	texData = NULL;
 }
 
@@ -255,13 +263,14 @@ void GLDisplay::update()
 void GLDisplay::drawPointCloud()
 {
 	glDisable(GL_TEXTURE_2D);
+	glPointSize(3.0f);
 	glBegin(GL_POINTS); //starts drawing of points
 	for (int i = 0; i < texWidth * texHeight * 6; i+=6)
 	{
-		if (*(data3D + i) == 0.0f)
+		if (*(pointsCloudData + i) == 0.0f)
 			continue;
-		glColor3f(*(data3D + i), *(data3D + i + 1), *(data3D + i + 2));
-		glVertex3f(*(data3D + i + 3), *(data3D + i + 4), *(data3D + i + 5));
+		glColor3f(*(pointsCloudData + i), *(pointsCloudData + i + 1), *(pointsCloudData + i + 2));
+		glVertex3f(*(pointsCloudData + i + 3), *(pointsCloudData + i + 4), *(pointsCloudData + i + 5));
 	}
 	glEnd();//end drawing of points
 }
@@ -272,4 +281,17 @@ void GLDisplay::resetRotation()
 	yRot = 0;
 	zRot = 0;
 	scale = 1.0;
+}
+void GLDisplay::setPoints(int size, const float *data)
+{
+	pointsSize = size;
+	points = data;
+}
+
+void GLDisplay::drawPoints()
+{
+	for (int i = 0; i < pointsSize * 3; i+=3)
+	{
+		drawSphere(*(points+i), *(points + i + 1), *(points + i + 2), 0.01f);
+	}
 }

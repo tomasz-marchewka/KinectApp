@@ -14,6 +14,8 @@ OpenNITracking::OpenNITracking(GLDisplay *display) : TrackingMethod(QString(meth
 OpenNITracking::~OpenNITracking()
 {
 	delete texMap;
+	delete data3d;
+	data3d = NULL;
 	texMap = NULL;
 }
 
@@ -28,12 +30,15 @@ void OpenNITracking::createButtons()
 	//start ir button
 	QPushButton* startIrButton = new QPushButton("Start infrared");
 	connect(startIrButton, SIGNAL(clicked()), SLOT(startIr()));
+	//start 3d button
+	QPushButton* start3dButton = new QPushButton("Start 3d");
+	connect(start3dButton, SIGNAL(clicked()), SLOT(start3dPoints()));
 
 	//stop button 
 	QPushButton* stopButton = new QPushButton("Stop");
 	connect(stopButton, SIGNAL(clicked()), SLOT(stopTracking()));
 
-	options  << startColorButton << startDepthButton << startIrButton<< stopButton;
+	options  << startColorButton << startDepthButton << startIrButton << start3dButton << stopButton;
 }
 
 bool OpenNITracking::init()
@@ -111,7 +116,7 @@ bool OpenNITracking::initStream(openni::SensorType sensorType, QString sensorNam
 		streamHeight = videoMode.getResolutionY();
 
 		texMap = new openni::RGB888Pixel[streamWidth * streamHeight];
-
+		data3d = new float[streamWidth * streamHeight * 6];
 		logger.log(sensorName + " stream initialized succesful");
 		return true;
 	}
@@ -172,6 +177,39 @@ void OpenNITracking::drawIr()
 	display->setImage(streamWidth, streamHeight, texMap);
 }
 
+
+void OpenNITracking::draw3dPoints()
+{
+	videoStream.readFrame(&videoFrame);
+	if (videoFrame.isValid())
+	{
+		streamWidth = videoFrame.getWidth();
+		streamHeight = videoFrame.getHeight();
+		int size = streamWidth * streamHeight;
+
+		float* dataIterator = (float*)data3d;
+		const openni::DepthPixel* source = reinterpret_cast<const openni::DepthPixel*>(videoFrame.getData());
+
+		for (int i = 0; i < streamHeight; i++)
+		{
+			for (int j = 0; j < streamWidth; j++)
+			{
+				int numPix = j + i * streamWidth;
+				int depth = *(source + numPix);
+				float intensity = depth / (float)OPENNI_DEPTH_LEVEL;
+
+				*(dataIterator++) = intensity;
+				*(dataIterator++) = intensity;
+				*(dataIterator++) = intensity;
+				*(dataIterator++) = (2.0f * j / streamWidth) - 1.0f;
+				*(dataIterator++) = -(2.0f * i / streamHeight) + 1.0f;
+				*(dataIterator++) = -3.0f * intensity;
+			}
+		}
+	}
+	display->setPointCloudData(streamWidth, streamHeight, data3d);
+}
+
 void OpenNITracking::startVideo()
 {
 	streamType = COLOR;
@@ -187,6 +225,12 @@ void OpenNITracking::startDepth()
 void OpenNITracking::startIr()
 {
 	streamType = IR;
+	QThread::start();
+}
+
+void OpenNITracking::start3dPoints()
+{
+	streamType = POINTS_3D;
 	QThread::start();
 }
 
@@ -223,6 +267,14 @@ void OpenNITracking::run()
 			while (isRunning)
 				drawIr();
 			memset(texMap, 0, streamWidth*streamHeight*sizeof(openni::RGB888Pixel));
+		}
+		break;
+	case TrackingMethod::POINTS_3D:
+		if (initStream(openni::SENSOR_DEPTH, "depth"))
+		{
+			while (isRunning)
+				draw3dPoints();
+			memset(data3d, 0, streamWidth*streamHeight*sizeof(float) * 6);
 		}
 		break;
 	default:

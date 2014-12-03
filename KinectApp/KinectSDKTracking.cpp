@@ -10,6 +10,7 @@ const char* KinectSDKTracking::methodName = "KinectSDK";
 KinectSDKTracking::KinectSDKTracking(GLDisplay* display) : TrackingMethod(methodName, display)
 {
 	sensor = NULL;
+	skeletonData = new float[NUI_SKELETON_POSITION_COUNT * 3];
 	data = new unsigned char[videoResolution.getWidth() * videoResolution.getHeight() * 3]; //multiply by 3 because we use rgb (3 bytes)
 	data3D = new float[videoResolution.getWidth() * videoResolution.getHeight() * 6];
 	createButtons();
@@ -21,6 +22,8 @@ KinectSDKTracking::~KinectSDKTracking()
 {
 	delete data;
 	delete data3D;
+	delete skeletonData;
+	skeletonData = NULL;
 	data3D = NULL;
 	data = NULL;
 }
@@ -40,6 +43,10 @@ void KinectSDKTracking::createButtons()
 	connect(startIrButton, SIGNAL(clicked()), SLOT(startIr()));
 
 	//start skeleton tracking button
+	QPushButton* startSkeletonTracking = new QPushButton("Start skeleton ");
+	connect(startSkeletonTracking, SIGNAL(clicked()), SLOT(startSkeletonTracking()));
+
+	//start skeleton tracking button
 	QPushButton* start3dPoints = new QPushButton("Start 3d ");
 	connect(start3dPoints, SIGNAL(clicked()), SLOT(start3dPoints()));
 
@@ -47,7 +54,7 @@ void KinectSDKTracking::createButtons()
 	QPushButton* stopButton = new QPushButton("Stop");
 	connect(stopButton, SIGNAL(clicked()), SLOT(stop()));
 
-	options << startButton << startDepthButton << startIrButton  << start3dPoints << stopButton;
+	options << startButton << startDepthButton << startIrButton  << startSkeletonTracking << start3dPoints << stopButton;
 }
 
 bool KinectSDKTracking::init()
@@ -101,6 +108,7 @@ bool KinectSDKTracking::initSensor(NUI_IMAGE_TYPE sensorType, QString sensorName
 			return false;
 		}
 		
+		logger.log("KinectSDK: " + sensorName + " stream initialized succesful.");
 		return true;
 	}
 	return false;
@@ -175,8 +183,10 @@ void KinectSDKTracking::run()
 	case TrackingMethod::SKELETON:
 		if (init())
 		{
+			logger.log("KinectSDK: skeleton tracking work.");
 			while (isRunning)
 				drawSkeleton();
+			memset(skeletonData, 0, sizeof(float)* NUI_SKELETON_POSITION_COUNT * 3);
 		}
 		break;
 	case TrackingMethod::POINTS_3D:
@@ -305,9 +315,9 @@ void KinectSDKTracking::draw3dPoints()
 
 			float* dataIterator = data3D;
 			const NUI_DEPTH_IMAGE_PIXEL* currPixel = reinterpret_cast<const NUI_DEPTH_IMAGE_PIXEL*>(lockedRect.pBits);
-			const NUI_DEPTH_IMAGE_PIXEL* endPixel = currPixel + (videoResolution.getWidth() * videoResolution.getHeight());
 			int x = videoResolution.getWidth();
 			int y = videoResolution.getHeight();
+
 			for (int i = 0; i < y; i++)
 			{
 				for (int j = 0; j < x; j++)
@@ -327,7 +337,7 @@ void KinectSDKTracking::draw3dPoints()
 					*(dataIterator++) = intensity;
 					*(dataIterator++) = (2.0f * j / x) - 1.0f;
 					*(dataIterator++) = -(2.0f * i / y) + 1.0f;
-					*(dataIterator++) = -intensity;
+					*(dataIterator++) = -3.0f * intensity;
 				}
 			}
 		}
@@ -337,7 +347,7 @@ void KinectSDKTracking::draw3dPoints()
 
 	sensor->NuiImageStreamReleaseFrame(stream, &imageFrame);
 
-	display->setData3D(videoResolution.getWidth(), videoResolution.getHeight(), data3D);
+	display->setPointCloudData(videoResolution.getWidth(), videoResolution.getHeight(), data3D);
 }
 
 void KinectSDKTracking::drawIr()
@@ -376,12 +386,32 @@ void KinectSDKTracking::drawSkeleton()
 	{
 		return;
 	}
-
-	NUI_SKELETON_TRACKING_STATE trackingState = skeletonFrame.SkeletonData[0].eTrackingState;
+	int skelNumber = 0;
+	for (int i = 0; i < NUI_SKELETON_COUNT; i++)
+	{
+		if (skeletonFrame.SkeletonData[i].eTrackingState == NUI_SKELETON_TRACKED)
+		{
+			skelNumber = i;
+			break;
+		}
+	}
+	NUI_SKELETON_TRACKING_STATE trackingState = skeletonFrame.SkeletonData[skelNumber].eTrackingState;
 	if (NUI_SKELETON_TRACKED == trackingState)
 	{
-		
+		//logger.log("KinectSDK: Skeleton tracked");
+		for (int i = 0, j = 0; i < NUI_SKELETON_POSITION_COUNT; i++, j+=3)
+		{
+			*(skeletonData + j) = skeletonFrame.SkeletonData[skelNumber].SkeletonPositions[i].x;
+			*(skeletonData + j + 1) = skeletonFrame.SkeletonData[skelNumber].SkeletonPositions[i].y;
+			*(skeletonData + j + 2) = skeletonFrame.SkeletonData[skelNumber].SkeletonPositions[i].z;
+		}
+		display->setPoints(NUI_SKELETON_POSITION_COUNT, skeletonData);
 	}
+	else if (NUI_SKELETON_NOT_TRACKED == trackingState)
+	{
+		display->setPoints(0, NULL);
+	}
+	
 
 }
 

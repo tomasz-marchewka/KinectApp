@@ -39,6 +39,7 @@ private:
 
 	unsigned char* data;
 	float *data3D;
+	float *skeletonData;
 	unsigned int textureId;
 
 	void* stream;

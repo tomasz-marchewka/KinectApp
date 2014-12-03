@@ -19,7 +19,8 @@ public:
 	void setDrawingColor(QColor color);
 
 	void setImage(GLsizei width, GLsizei height, const GLvoid *data);
-	void setData3D(GLsizei width, GLsizei height, const float *data);
+	void setPointCloudData(GLsizei width, GLsizei height, const float *data);
+	void setPoints(int size, const float *data);
 
 public slots:
 	void setXRotation(int angle);
@@ -46,6 +47,7 @@ protected:
 	void mouseMoveEvent(QMouseEvent *event);
 	void wheelEvent(QWheelEvent *event);
 private:
+	void drawPoints();
 
 	double scale;
 	bool lockRotation;
@@ -55,7 +57,9 @@ private:
 
 	QPoint lastPos;
 
-	const float *data3D;
+	const float *points;
+	int pointsSize;
+	const float *pointsCloudData;
 	const GLvoid *texData;
 	GLsizei texWidth;
 	GLsizei texHeight;
