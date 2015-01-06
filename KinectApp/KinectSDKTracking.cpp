@@ -5,9 +5,8 @@
 static Logger& logger = Logger::getInstance();
 static KinectSDKParameters& videoResolution = KinectSDKParameters::getInstance(NUI_IMAGE_RESOLUTION_640x480);
 
-const char* KinectSDKTracking::methodName = "KinectSDK";
 
-KinectSDKTracking::KinectSDKTracking(GLDisplay* display) : TrackingMethod(methodName, display)
+KinectSDKTracking::KinectSDKTracking(QString name, GLDisplay* display) : TrackingMethod(name, display)
 {
 	sensor = NULL;
 	skeletonData = new float[NUI_SKELETON_POSITION_COUNT * 3];
@@ -398,7 +397,6 @@ void KinectSDKTracking::drawSkeleton()
 	NUI_SKELETON_TRACKING_STATE trackingState = skeletonFrame.SkeletonData[skelNumber].eTrackingState;
 	if (NUI_SKELETON_TRACKED == trackingState)
 	{
-		//logger.log("KinectSDK: Skeleton tracked");
 		for (int i = 0, j = 0; i < NUI_SKELETON_POSITION_COUNT; i++, j+=3)
 		{
 			*(skeletonData + j) = skeletonFrame.SkeletonData[skelNumber].SkeletonPositions[i].x;

@@ -2,14 +2,13 @@
 #include "Logger.h"
 
 static Logger &logger = Logger::getInstance();
-const char* OpenNITracking::methodName = "OpenNI";
+
 const int OPENNI_DEPTH_LEVEL = 10000;
 
-OpenNITracking::OpenNITracking(GLDisplay *display) : TrackingMethod(QString(methodName), display)
+OpenNITracking::OpenNITracking(QString name, GLDisplay *display) : TrackingMethod(name, display)
 {
 	createButtons();
 }
-
 
 OpenNITracking::~OpenNITracking()
 {
@@ -117,7 +116,7 @@ bool OpenNITracking::initStream(openni::SensorType sensorType, QString sensorNam
 
 		texMap = new openni::RGB888Pixel[streamWidth * streamHeight];
 		data3d = new float[streamWidth * streamHeight * 6];
-		logger.log(sensorName + " stream initialized succesful");
+		logger.log("OpenNI " + sensorName + " stream initialized succesful");
 		return true;
 	}
 	return false;

@@ -9,7 +9,7 @@ class KinectSDKTracking : public TrackingMethod
 {
 	Q_OBJECT
 public:
-	KinectSDKTracking(GLDisplay *display);
+	KinectSDKTracking(QString name, GLDisplay *display);
 	~KinectSDKTracking();
 
 	virtual bool init();
@@ -34,9 +34,6 @@ protected:
 
 private:
 	bool initSensor(NUI_IMAGE_TYPE sensorType, QString sensorName);
-
-	static const char* methodName;
-
 	unsigned char* data;
 	float *data3D;
 	float *skeletonData;

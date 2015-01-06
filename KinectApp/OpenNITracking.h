@@ -1,13 +1,13 @@
 #pragma once
 
 #include "TrackingMethod.h"
-#include <OpenNI\OpenNI.h>
+#include <OpenNI.h>
 
 class OpenNITracking : public TrackingMethod
 {
 	Q_OBJECT
 public:
-	OpenNITracking(GLDisplay *display);
+	OpenNITracking(QString name, GLDisplay *display);
 	~OpenNITracking();
 
 	virtual bool init();
@@ -27,12 +27,10 @@ public slots:
 
 protected:
 	void run();
+	void createButtons();
 
 private:
-	static const char* methodName;
-
 	bool initStream(openni::SensorType sensorType, QString sensorName);
-	void createButtons();
 
 	openni::RGB888Pixel* texMap;
 	float *data3d;
