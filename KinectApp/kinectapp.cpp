@@ -4,6 +4,7 @@
 #include "OpenNITracking.h"
 #include "KinectSDKTracking.h"
 #include "NiTETracking.h"
+#include "PLCTracking.h"
 
 
 static Logger &logger = Logger::getInstance();
@@ -15,7 +16,7 @@ KinectApp::KinectApp(QWidget *parent)
 	addTrackingMethod(new OpenNITracking("OpenNI", ui.glDisplay));
 	addTrackingMethod(new NiTETracking("NiTE", ui.glDisplay));
 	addTrackingMethod(new KinectSDKTracking("KinectSDK", ui.glDisplay));
-
+	addTrackingMethod(new PLCTracking("PCL", ui.glDisplay));
 	
 	connect(ui.comboBox, SIGNAL(activated(int)), SLOT(selectMethod(int)));
 	connect(ui.checkBox, SIGNAL(stateChanged(int)), SLOT(showConsole(int)));

@@ -263,7 +263,7 @@ void GLDisplay::update()
 void GLDisplay::drawPointCloud()
 {
 	glDisable(GL_TEXTURE_2D);
-	glPointSize(3.0f);
+	glPointSize(1.0f);
 	glBegin(GL_POINTS); //starts drawing of points
 	for (int i = 0; i < texWidth * texHeight * 6; i+=6)
 	{
