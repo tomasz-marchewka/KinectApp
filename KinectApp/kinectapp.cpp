@@ -1,5 +1,4 @@
 #include "kinectapp.h"
-#include "MockTracking.h"
 #include "Logger.h"
 #include "OpenNITracking.h"
 #include "KinectSDKTracking.h"
@@ -50,6 +49,7 @@ void KinectApp::selectMethod(int index)
 	if (selectedMethod != NULL)
 	{
 		showButtons(selectedMethod->getFunctionList());
+		showButtons(selectedMethod->getAdditionalFunctionList());
 	}
 	else
 	{
@@ -62,16 +62,20 @@ void KinectApp::hideButtons()
 {
 	for each (TrackingMethod * method in methods)
 	{
-		for each (QPushButton * button in method->getFunctionList())
+		for each (QWidget * element in method->getFunctionList())
 		{
-			button->setVisible(false);
+			element->setVisible(false);
+		}
+		for each (QWidget * element in method->getAdditionalFunctionList())
+		{
+			element->setVisible(false);
 		}
 	}
 }
 
-void KinectApp::showButtons(QList<QPushButton *> buttons)
+void KinectApp::showButtons(QList<QWidget *> buttons)
 {
-	for each (QPushButton * button in buttons)
+	for each (QWidget * button in buttons)
 	{
 		button->setVisible(true);
 	}
@@ -84,10 +88,15 @@ void KinectApp::setButtons()
 	{
 		for each (TrackingMethod * method in methods)
 		{
-			for each (QPushButton * button in method->getFunctionList())
+			for each (QWidget * element in method->getFunctionList())
 			{
-				ui.horizontalLayout->addWidget(button);
-				button->setVisible(false);
+				ui.horizontalLayout->addWidget(element);
+				element->setVisible(false);
+			}
+			for each (QWidget * element in method->getAdditionalFunctionList())
+			{
+				ui.verticalLayout_4->addWidget(element);
+				element->setVisible(false);
 			}
 		}
 		isButtonSet = true;

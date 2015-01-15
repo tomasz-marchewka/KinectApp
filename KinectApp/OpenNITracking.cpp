@@ -1,5 +1,7 @@
 #include "OpenNITracking.h"
 #include "Logger.h"
+#include <qfiledialog.h>
+
 
 static Logger &logger = Logger::getInstance();
 
@@ -7,7 +9,14 @@ const int OPENNI_DEPTH_LEVEL = 10000;
 
 OpenNITracking::OpenNITracking(QString name, GLDisplay *display) : TrackingMethod(name, display)
 {
-	createButtons();
+	colorRecord = false;
+	depthRecord = false;
+	irRecord = false;
+	streamWidth = 640;
+	streamHeight = 480;
+	texMap = new openni::RGB888Pixel[streamWidth * streamHeight];
+	data3d = new float[streamWidth * streamHeight * 6];
+	createGUI();
 }
 
 OpenNITracking::~OpenNITracking()
@@ -18,7 +27,7 @@ OpenNITracking::~OpenNITracking()
 	texMap = NULL;
 }
 
-void OpenNITracking::createButtons()
+void OpenNITracking::createGUI()
 {
 	//start button
 	QPushButton* startColorButton = new QPushButton("Start color");
@@ -33,15 +42,36 @@ void OpenNITracking::createButtons()
 	QPushButton* start3dButton = new QPushButton("Start 3d");
 	connect(start3dButton, SIGNAL(clicked()), SLOT(start3dPoints()));
 
+	//record button
+	QPushButton* startRecordButton = new QPushButton("Start record");
+	connect(startRecordButton, SIGNAL(clicked()), SLOT(startRecord()));
+
 	//stop button 
 	QPushButton* stopButton = new QPushButton("Stop");
 	connect(stopButton, SIGNAL(clicked()), SLOT(stopTracking()));
 
-	options  << startColorButton << startDepthButton << startIrButton << start3dButton << stopButton;
+	//check box color stream
+	colorCheck = new QCheckBox("Color stream");
+	connect(colorCheck, SIGNAL(clicked(bool)), SLOT(colorCheckBoxChange(bool)));
+
+	//check box depth stream
+	depthCheck = new QCheckBox("Depth stream");
+	connect(depthCheck, SIGNAL(clicked(bool)), SLOT(depthCheckBoxChange(bool)));
+
+	//check box ir stream
+	irCheck = new QCheckBox("Ir stream");
+	connect(irCheck, SIGNAL(clicked(bool)), SLOT(irCheckBoxChange(bool)));
+
+	options << startColorButton << startDepthButton << startIrButton << start3dButton << stopButton ;
+	additionalOptions << startRecordButton << colorCheck << depthCheck << irCheck;
 }
 
 bool OpenNITracking::init()
 {
+	if (device.isValid())
+	{
+		return true;
+	}
 	openni::Status status = openni::STATUS_OK;
 	QString message;
 	status = openni::OpenNI::initialize();
@@ -70,14 +100,14 @@ bool OpenNITracking::init()
 	return true;
 }
 
-bool OpenNITracking::initStream(openni::SensorType sensorType, QString sensorName)
+bool OpenNITracking::initStream(openni::SensorType sensorType, QString sensorName, openni::VideoStream* videoStream)
 {
 	if (init())
 	{
 		openni::Status status = openni::STATUS_OK;
 		QString message;
 
-		status = videoStream.create(device, sensorType);
+		status = videoStream->create(device, sensorType);
 		if (status != openni::STATUS_OK)
 		{
 			message = "Couldn't find " + sensorName + " stream.\n";
@@ -88,34 +118,32 @@ bool OpenNITracking::initStream(openni::SensorType sensorType, QString sensorNam
 			return false;
 		}
 
-		status = videoStream.start();
+		status = videoStream->start();
 		if (status != openni::STATUS_OK)
 		{
 			message = "Couldn't start " + sensorName + " stream\n";
 			message += openni::OpenNI::getExtendedError();
 			logger.log(message);
-			videoStream.destroy();
+			videoStream->destroy();
 			openni::OpenNI::shutdown();
 			logger.log("OpenNI shutdown");
 			return false;
 		}
 
-		if (!videoStream.isValid())
+		if (!videoStream->isValid())
 		{
 			message = sensorName + " stream is invalid\n";
 			message += openni::OpenNI::getExtendedError();
 			logger.log(message);
-			videoStream.destroy();
+			videoStream->destroy();
 			openni::OpenNI::shutdown();
 			logger.log("OpenNI shutdown");
 			return false;
 		}
-		openni::VideoMode videoMode = videoStream.getVideoMode();
+		openni::VideoMode videoMode = videoStream->getVideoMode();
 		streamWidth = videoMode.getResolutionX();
 		streamHeight = videoMode.getResolutionY();
 
-		texMap = new openni::RGB888Pixel[streamWidth * streamHeight];
-		data3d = new float[streamWidth * streamHeight * 6];
 		logger.log("OpenNI " + sensorName + " stream initialized succesful");
 		return true;
 	}
@@ -124,7 +152,7 @@ bool OpenNITracking::initStream(openni::SensorType sensorType, QString sensorNam
 
 void OpenNITracking::draw()
 {
-	videoStream.readFrame(&videoFrame);
+	colorVideoStream.readFrame(&videoFrame);
 	if (videoFrame.isValid())
 	{
 		memcpy(texMap, videoFrame.getData(), videoFrame.getDataSize());
@@ -134,7 +162,7 @@ void OpenNITracking::draw()
 
 void OpenNITracking::drawDepth()
 {
-	videoStream.readFrame(&videoFrame);
+	depthVideoStream.readFrame(&videoFrame);
 	if (videoFrame.isValid())
 	{
 		streamWidth = videoFrame.getWidth();
@@ -157,7 +185,7 @@ void OpenNITracking::drawDepth()
 
 void OpenNITracking::drawIr()
 {
-	videoStream.readFrame(&videoFrame);
+	irVideoStream.readFrame(&videoFrame);
 	if (videoFrame.isValid())
 	{
 		streamWidth = videoFrame.getWidth();
@@ -179,7 +207,7 @@ void OpenNITracking::drawIr()
 
 void OpenNITracking::draw3dPoints()
 {
-	videoStream.readFrame(&videoFrame);
+	depthVideoStream.readFrame(&videoFrame);
 	if (videoFrame.isValid())
 	{
 		streamWidth = videoFrame.getWidth();
@@ -233,6 +261,16 @@ void OpenNITracking::start3dPoints()
 	QThread::start();
 }
 
+void OpenNITracking::startRecord()
+{
+	fileName = QFileDialog::getSaveFileName(NULL, tr("Save File"), "", tr("Files (*.oni)"));
+	if (fileName != "") 
+	{
+		streamType = RECORD;
+		QThread::start();
+	}
+}
+
 void OpenNITracking::stopTracking()
 {
 	isRunning = false;
@@ -245,44 +283,105 @@ void OpenNITracking::run()
 	switch (streamType)
 	{
 	case TrackingMethod::COLOR:
-		if (initStream(openni::SENSOR_COLOR, "color"))
+		if (initStream(openni::SENSOR_COLOR, "color", &colorVideoStream))
 		{
 			while (isRunning)
 				draw();
-			memset(texMap, 0, streamWidth*streamHeight*sizeof(openni::RGB888Pixel));
 		}
 		break;
 	case TrackingMethod::DEPTH:
-		if (initStream(openni::SENSOR_DEPTH, "depth"))
+		if (initStream(openni::SENSOR_DEPTH, "depth", &depthVideoStream))
 		{
 			while (isRunning)
 				drawDepth();
-			memset(texMap, 0, streamWidth*streamHeight*sizeof(openni::RGB888Pixel));
 		}
 		break;
 	case TrackingMethod::IR:
-		if (initStream(openni::SENSOR_IR, "infrared"))
+		if (initStream(openni::SENSOR_IR, "infrared", &irVideoStream))
 		{
 			while (isRunning)
 				drawIr();
-			memset(texMap, 0, streamWidth*streamHeight*sizeof(openni::RGB888Pixel));
 		}
 		break;
 	case TrackingMethod::POINTS_3D:
-		if (initStream(openni::SENSOR_DEPTH, "depth"))
+		if (initStream(openni::SENSOR_DEPTH, "depth", &depthVideoStream))
 		{
 			while (isRunning)
 				draw3dPoints();
-			memset(data3d, 0, streamWidth*streamHeight*sizeof(float) * 6);
 		}
 		break;
+	case TrackingMethod::RECORD:
+		if (initRecord())
+		{
+			while (isRunning)
+				record();
+			finalizeRecord();
+		}
 	default:
 		break;
 	}
-	videoStream.destroy();
+	finalize();
+	logger.log("OpenNI thread is stoped");
+}
+
+bool OpenNITracking::initRecord()
+{
+	if (init())
+	{
+		recorder.create(fileName.toStdString().c_str());
+
+		if (irRecord)
+		{
+			initStream(openni::SENSOR_IR, "infrared", &irVideoStream);
+			recorder.attach(irVideoStream, true);
+		}
+		if (depthRecord)
+		{
+			initStream(openni::SENSOR_DEPTH, "depth", &depthVideoStream);
+			recorder.attach(depthVideoStream, true);
+		}
+		if (colorRecord)
+		{
+			initStream(openni::SENSOR_COLOR, "color", &colorVideoStream);
+			recorder.attach(colorVideoStream, true);
+		}
+		recorder.start();
+
+		return true;
+	}
+}
+
+void OpenNITracking::finalizeRecord()
+{
+	recorder.stop();
+	recorder.destroy();
+}
+
+void OpenNITracking::finalize()
+{
+	memset(texMap, 0, streamWidth*streamHeight*sizeof(openni::RGB888Pixel));
+	memset(data3d, 0, streamWidth*streamHeight*sizeof(float)* 6);
+	colorVideoStream.destroy();
+	depthVideoStream.destroy();
+	irVideoStream.destroy();
 	device.close();
 	openni::OpenNI::shutdown();
-	logger.log("OpenNI thread is stoped");
+}
+
+void OpenNITracking::record()
+{
+	if (colorRecord && colorVideoStream.isValid())
+	{
+		draw();
+	} 
+	else if (depthRecord && depthVideoStream.isValid())
+	{
+		drawDepth();
+	}
+	else if (irRecord && irVideoStream.isValid())
+	{
+		drawIr();
+	}
 }
 
 void OpenNITracking::close()

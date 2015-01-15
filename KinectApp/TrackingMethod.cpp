@@ -22,7 +22,12 @@ QString TrackingMethod::getName()
 	return name;
 }
 
-QList<QPushButton *> TrackingMethod::getFunctionList()
+QList<QWidget *> TrackingMethod::getFunctionList()
 {
 	return options;
+}
+
+QList<QWidget *> TrackingMethod::getAdditionalFunctionList()
+{
+	return additionalOptions;
 }

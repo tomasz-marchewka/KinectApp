@@ -1,9 +1,9 @@
 #pragma once
 #include <QList>
-#include <QPushButton>
 #include <QString>
 #include <qthread.h>
 #include <gldisplay.h>
+#include <qpushbutton.h>
 
 class TrackingMethod : public QThread
 {
@@ -14,7 +14,8 @@ public:
 	virtual bool init() = 0;
 	virtual void draw() = 0;
 	virtual void close() = 0;
-	virtual QList<QPushButton *> getFunctionList();
+	virtual QList<QWidget *> getFunctionList();
+	virtual QList<QWidget *> getAdditionalFunctionList();
 
 	virtual void setDisplay(GLDisplay *display);
 	virtual QString getName();
@@ -22,9 +23,10 @@ public:
 protected:
 	GLDisplay *display;
 	QString name;
-	QList<QPushButton *> options;
+	QList<QWidget *> options;
+	QList<QWidget *> additionalOptions;
 
-	enum TYPES_OF_STREAM { COLOR = 1, DEPTH = 2, IR = 3, SKELETON = 4, POINTS_3D = 5};
+	enum TYPES_OF_STREAM { COLOR = 1, DEPTH = 2, IR = 3, SKELETON = 4, POINTS_3D = 5, RECORD = 6};
 	TYPES_OF_STREAM streamType;
 
 	bool isRunning;

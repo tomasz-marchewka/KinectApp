@@ -26,7 +26,7 @@ private:
 	QList<TrackingMethod*> methods;
 	TrackingMethod * selectedMethod;
 
-	void showButtons(QList<QPushButton *> buttons);
+	void showButtons(QList<QWidget *> buttons);
 	void hideButtons();
 	void setButtons();
 

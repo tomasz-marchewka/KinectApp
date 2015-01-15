@@ -85,7 +85,7 @@ void PLCTracking::run()
 		{
 			logger.log("PCL: cloud capture work.");
 			while (isRunning);
-			//memset(skeletonData, 0, sizeof(float)* NITE_JOINT_COUNT * 3);
+			memset(data, 0, sizeof(float)* DATA_SIZE * 6);
 		}
 		break;
 	default:
