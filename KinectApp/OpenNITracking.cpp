@@ -9,9 +9,9 @@ const int OPENNI_DEPTH_LEVEL = 10000;
 
 OpenNITracking::OpenNITracking(QString name, GLDisplay *display) : TrackingMethod(name, display)
 {
-	colorRecord = false;
-	depthRecord = false;
-	irRecord = false;
+	colorSelected = false;
+	depthSelected = false;
+	irSelected = false;
 	streamWidth = 640;
 	streamHeight = 480;
 	texMap = new openni::RGB888Pixel[streamWidth * streamHeight];
@@ -42,13 +42,17 @@ void OpenNITracking::createGUI()
 	QPushButton* start3dButton = new QPushButton("Start 3d");
 	connect(start3dButton, SIGNAL(clicked()), SLOT(start3dPoints()));
 
-	//record button
-	QPushButton* startRecordButton = new QPushButton("Start record");
-	connect(startRecordButton, SIGNAL(clicked()), SLOT(startRecord()));
-
 	//stop button 
 	QPushButton* stopButton = new QPushButton("Stop");
 	connect(stopButton, SIGNAL(clicked()), SLOT(stopTracking()));
+
+	//open file button 
+	QPushButton* openFileButton = new QPushButton("Open file");
+	connect(openFileButton, SIGNAL(clicked()), SLOT(openFile()));
+
+	//record button
+	QPushButton* startRecordButton = new QPushButton("Start record");
+	connect(startRecordButton, SIGNAL(clicked()), SLOT(startRecord()));
 
 	//check box color stream
 	colorCheck = new QCheckBox("Color stream");
@@ -63,15 +67,11 @@ void OpenNITracking::createGUI()
 	connect(irCheck, SIGNAL(clicked(bool)), SLOT(irCheckBoxChange(bool)));
 
 	options << startColorButton << startDepthButton << startIrButton << start3dButton << stopButton ;
-	additionalOptions << startRecordButton << colorCheck << depthCheck << irCheck;
+	additionalOptions << openFileButton << startRecordButton << colorCheck << depthCheck << irCheck;
 }
 
-bool OpenNITracking::init()
+bool OpenNITracking::init(const char* dev_uri)
 {
-	if (device.isValid())
-	{
-		return true;
-	}
 	openni::Status status = openni::STATUS_OK;
 	QString message;
 	status = openni::OpenNI::initialize();
@@ -85,7 +85,7 @@ bool OpenNITracking::init()
 
 	logger.log("OpenNI initalizing...");
 
-	status = device.open(openni::ANY_DEVICE);
+	status = device.open(dev_uri);
 	if (status != openni::STATUS_OK)
 	{
 		message = "Device open failed\n";
@@ -102,8 +102,11 @@ bool OpenNITracking::init()
 
 bool OpenNITracking::initStream(openni::SensorType sensorType, QString sensorName, openni::VideoStream* videoStream)
 {
-	if (init())
-	{
+		if (!device.isValid())
+		{
+			if (!init())
+				return false;
+		}
 		openni::Status status = openni::STATUS_OK;
 		QString message;
 
@@ -113,8 +116,6 @@ bool OpenNITracking::initStream(openni::SensorType sensorType, QString sensorNam
 			message = "Couldn't find " + sensorName + " stream.\n";
 			message += openni::OpenNI::getExtendedError();
 			logger.log(message);
-			openni::OpenNI::shutdown();
-			logger.log("OpenNI shutdown");
 			return false;
 		}
 
@@ -125,8 +126,6 @@ bool OpenNITracking::initStream(openni::SensorType sensorType, QString sensorNam
 			message += openni::OpenNI::getExtendedError();
 			logger.log(message);
 			videoStream->destroy();
-			openni::OpenNI::shutdown();
-			logger.log("OpenNI shutdown");
 			return false;
 		}
 
@@ -136,8 +135,6 @@ bool OpenNITracking::initStream(openni::SensorType sensorType, QString sensorNam
 			message += openni::OpenNI::getExtendedError();
 			logger.log(message);
 			videoStream->destroy();
-			openni::OpenNI::shutdown();
-			logger.log("OpenNI shutdown");
 			return false;
 		}
 		openni::VideoMode videoMode = videoStream->getVideoMode();
@@ -146,8 +143,6 @@ bool OpenNITracking::initStream(openni::SensorType sensorType, QString sensorNam
 
 		logger.log("OpenNI " + sensorName + " stream initialized succesful");
 		return true;
-	}
-	return false;
 }
 
 void OpenNITracking::draw()
@@ -263,10 +258,22 @@ void OpenNITracking::start3dPoints()
 
 void OpenNITracking::startRecord()
 {
+	fileName = "";
 	fileName = QFileDialog::getSaveFileName(NULL, tr("Save File"), "", tr("Files (*.oni)"));
 	if (fileName != "") 
 	{
 		streamType = RECORD;
+		QThread::start();
+	}
+}
+
+void OpenNITracking::openFile()
+{
+	fileName = "";
+	fileName = QFileDialog::getOpenFileName(NULL, tr("Open File"), "", tr("Files (*.oni)"));
+	if (fileName != "")
+	{
+		streamType = FROM_FILE;
 		QThread::start();
 	}
 }
@@ -314,8 +321,13 @@ void OpenNITracking::run()
 		if (initRecord())
 		{
 			while (isRunning)
-				record();
+				drawSelected();
 			finalizeRecord();
+		}
+	case TrackingMethod::FROM_FILE:
+		if (initFromFile(fileName.toStdString().c_str())) {
+			while (isRunning)
+				drawSelected();
 		}
 	default:
 		break;
@@ -330,23 +342,38 @@ bool OpenNITracking::initRecord()
 	{
 		recorder.create(fileName.toStdString().c_str());
 
-		if (irRecord)
-		{
-			initStream(openni::SENSOR_IR, "infrared", &irVideoStream);
-			recorder.attach(irVideoStream, true);
-		}
-		if (depthRecord)
-		{
-			initStream(openni::SENSOR_DEPTH, "depth", &depthVideoStream);
-			recorder.attach(depthVideoStream, true);
-		}
-		if (colorRecord)
+		if (colorSelected)
 		{
 			initStream(openni::SENSOR_COLOR, "color", &colorVideoStream);
 			recorder.attach(colorVideoStream, true);
 		}
+		if (depthSelected)
+		{
+			initStream(openni::SENSOR_DEPTH, "depth", &depthVideoStream);
+			recorder.attach(depthVideoStream, true);
+		}
+		if (irSelected)
+		{
+			initStream(openni::SENSOR_IR, "infrared", &irVideoStream);
+			recorder.attach(irVideoStream, true);
+		}
+
 		recorder.start();
 
+		return true;
+	}
+}
+bool OpenNITracking::initFromFile(const char* file_name)
+{
+	if (init(file_name))
+	{
+
+		if (device.hasSensor(openni::SENSOR_COLOR))
+			initStream(openni::SENSOR_COLOR, "color", &colorVideoStream);
+		if (device.hasSensor(openni::SENSOR_DEPTH))
+			initStream(openni::SENSOR_DEPTH, "depth", &depthVideoStream);
+		if (device.hasSensor(openni::SENSOR_IR))
+			initStream(openni::SENSOR_IR, "infrared", &irVideoStream);
 		return true;
 	}
 }
@@ -368,17 +395,17 @@ void OpenNITracking::finalize()
 	openni::OpenNI::shutdown();
 }
 
-void OpenNITracking::record()
+void OpenNITracking::drawSelected()
 {
-	if (colorRecord && colorVideoStream.isValid())
+	if (colorSelected && colorVideoStream.isValid())
 	{
 		draw();
 	} 
-	else if (depthRecord && depthVideoStream.isValid())
+	else if (depthSelected && depthVideoStream.isValid())
 	{
 		drawDepth();
 	}
-	else if (irRecord && irVideoStream.isValid())
+	else if (irSelected && irVideoStream.isValid())
 	{
 		drawIr();
 	}

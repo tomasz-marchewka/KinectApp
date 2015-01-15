@@ -59,10 +59,6 @@ bool PLCTracking::init()
 	return true;
 }
 
-void PLCTracking::draw()
-{
-}
-
 void PLCTracking::startCaptureCloud()
 {
 	streamType = POINTS_3D;

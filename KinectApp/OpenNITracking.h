@@ -11,14 +11,14 @@ public:
 	OpenNITracking(QString name, GLDisplay *display);
 	~OpenNITracking();
 
-	virtual bool init();
+	virtual bool init(const char* dev_uri = openni::ANY_DEVICE);
 	virtual void draw();
 	virtual void close();
 
 	void drawDepth();
 	void drawIr();
 	void draw3dPoints();
-	void record();
+	void drawSelected();
 
 public slots:
 	void startVideo();
@@ -27,18 +27,19 @@ public slots:
 	void start3dPoints();
 	void stopTracking();
 	void startRecord();
+	void openFile();
 
 	void colorCheckBoxChange(bool state)
 	{
-		colorRecord = state;
+		colorSelected = state;
 	}
 	void depthCheckBoxChange(bool state)
 	{
-		depthRecord = state;
+		depthSelected = state;
 	}
 	void irCheckBoxChange(bool state)
 	{
-		irRecord = state;
+		irSelected = state;
 	}
 
 protected:
@@ -48,11 +49,17 @@ protected:
 private:
 	bool initStream(openni::SensorType sensorType, QString sensorName, openni::VideoStream* videoStream);
 	bool initRecord();
+	bool initFromFile(const char* file_name);
 	void finalizeRecord();
 	void finalize();
-	bool colorRecord;
-	bool depthRecord;
-	bool irRecord;
+
+	bool colorSelected;
+	bool depthSelected;
+	bool irSelected;
+
+	bool colorFromFile;
+	bool depthFromFile;
+	bool irFromFile;
 	QString fileName;
 
 	QCheckBox * colorCheck;
