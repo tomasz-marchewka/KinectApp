@@ -2,15 +2,16 @@
 #include "TrackingMethod.h"
 #include <kinect_grabber.h>
 #include <pcl/visualization/cloud_viewer.h>
+#include "qcheckbox.h"
 
 #define DATA_SIZE 307200
 
-class PLCTracking : public TrackingMethod
+class PCLTracking : public TrackingMethod
 {
 	Q_OBJECT
 public:
-	PLCTracking(QString name, GLDisplay *display);
-	~PLCTracking();
+	PCLTracking(QString name, GLDisplay *display);
+	~PCLTracking();
 
 	virtual bool init();
 	virtual void close();
@@ -18,6 +19,8 @@ public:
 public slots:
 	void startCaptureCloud();
 	void stopCapture();
+	void openFile();
+	void saveFile();
 
 protected:
 	void run();
@@ -25,6 +28,8 @@ protected:
 
 private:
 	boost::function<void(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr&)> function;
+	QString fileName;
+
 	//pcl::visualization::CloudViewer viewer;
 	pcl::Grabber* grabber;
 	float *data;

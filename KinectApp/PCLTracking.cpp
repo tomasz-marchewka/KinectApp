@@ -1,5 +1,8 @@
-#include "PLCTracking.h"
+#include "PCLTracking.h"
 #include "Logger.h"
+#include "qfiledialog.h"
+#include <pcl/io/pcd_io.h>
+
 
 static Logger &logger = Logger::getInstance();
 
@@ -8,19 +11,20 @@ float inline convert_color(uint8_t color)
 	return color / 255.0f;
 }
 
-PLCTracking::PLCTracking(QString name, GLDisplay *display) : TrackingMethod(name, display)//, viewer("Kinect data cloud")
+PCLTracking::PCLTracking(QString name, GLDisplay *display) : TrackingMethod(name, display)//, viewer("Kinect data cloud")
 {
+	fileName = "";
 	data = new float[DATA_SIZE * 6];
 	createButtons();
 }
 
 
-PLCTracking::~PLCTracking()
+PCLTracking::~PCLTracking()
 {
 	delete data;
 }
 
-void PLCTracking::createButtons()
+void PCLTracking::createButtons()
 {
 	//start capture button
 	QPushButton* startCaptureButton = new QPushButton("Start capture");
@@ -30,10 +34,19 @@ void PLCTracking::createButtons()
 	QPushButton* stopButton = new QPushButton("Stop capture");
 	connect(stopButton, SIGNAL(clicked()), SLOT(stopCapture()));
 
+	//open file button 
+	QPushButton* openFileButton = new QPushButton("Open cloud");
+	connect(openFileButton, SIGNAL(clicked()), SLOT(openFile()));
+
+	//record cloud check 
+	QPushButton* saveFileButton = new QPushButton("Save cloud");
+	connect(saveFileButton, SIGNAL(clicked()), SLOT(saveFile()));
+
 	options << startCaptureButton << stopButton;
+	additionalOptions << openFileButton << saveFileButton;
 }
 
-bool PLCTracking::init()
+bool PCLTracking::init()
 {
 	//pcl::visualization::CloudViewer& v = this->viewer;
 	grabber = new pcl::KinectGrabber();
@@ -51,6 +64,11 @@ bool PLCTracking::init()
 				*(data + j + 4) = point.y;
 				*(data + j + 5) = point.z;
 			}
+			//if (fileName != "")
+			//{
+			//	pcl::io::savePCDFileASCII(fileName.toStdString(), cloud);
+			//	fileName = "";
+			//}
 			display->setPointCloudData(640, 480, data);
 		}
 	};
@@ -59,18 +77,29 @@ bool PLCTracking::init()
 	return true;
 }
 
-void PLCTracking::startCaptureCloud()
+
+void PCLTracking::startCaptureCloud()
 {
 	streamType = POINTS_3D;
 	QThread::start();
 }
 
-void PLCTracking::stopCapture()
+void PCLTracking::stopCapture()
 {
 	isRunning = false;
 }
 
-void PLCTracking::run()
+void PCLTracking::saveFile()
+{
+	fileName = QFileDialog::getSaveFileName(NULL, tr("Save File"), "", tr("Files (*.pcd)"));
+}
+
+void PCLTracking::openFile()
+{
+
+}
+
+void PCLTracking::run()
 {
 	logger.log("PCL thread is running...");
 	isRunning = true;
@@ -92,7 +121,7 @@ void PLCTracking::run()
 	logger.log("PCL thread is stoped");
 }
 
-void PLCTracking::close()
+void PCLTracking::close()
 {
 	isRunning = false;
 	QThread::wait();

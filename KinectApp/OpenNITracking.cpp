@@ -342,26 +342,28 @@ bool OpenNITracking::initRecord()
 	{
 		recorder.create(fileName.toStdString().c_str());
 
-		if (colorSelected)
+		if (irSelected)
 		{
-			initStream(openni::SENSOR_COLOR, "color", &colorVideoStream);
-			recorder.attach(colorVideoStream, true);
+			initStream(openni::SENSOR_IR, "infrared", &irVideoStream);
+			recorder.attach(irVideoStream, true);
 		}
 		if (depthSelected)
 		{
 			initStream(openni::SENSOR_DEPTH, "depth", &depthVideoStream);
 			recorder.attach(depthVideoStream, true);
 		}
-		if (irSelected)
+		if (colorSelected)
 		{
-			initStream(openni::SENSOR_IR, "infrared", &irVideoStream);
-			recorder.attach(irVideoStream, true);
+			initStream(openni::SENSOR_COLOR, "color", &colorVideoStream);
+			recorder.attach(colorVideoStream, true);
 		}
+
 
 		recorder.start();
 
 		return true;
 	}
+	return false;
 }
 bool OpenNITracking::initFromFile(const char* file_name)
 {
