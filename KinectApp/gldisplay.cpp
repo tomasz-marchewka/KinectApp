@@ -7,8 +7,6 @@ void GLDisplay::drawSphere(float x, float y, float z, float size)
 {
 	GLUquadricObj* Sphere = gluNewQuadric();
 	gluQuadricNormals(Sphere, GLU_SMOOTH);
-	//gluQuadricTexture(Sphere, GL_TRUE);
-
 	glTranslatef(x, y, z);
 	gluSphere(Sphere, size, 20, 20);
 	glTranslatef(-x, -y, -z);

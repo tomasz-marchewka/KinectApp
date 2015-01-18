@@ -1,5 +1,6 @@
 #include "NiTETracking.h"
 #include "Logger.h"
+#include <qfiledialog.h>
 
 static Logger &logger = Logger::getInstance();
 
@@ -34,10 +35,16 @@ void NiTETracking::createButtons()
 	QPushButton* stopButton = new QPushButton("Stop");
 	connect(stopButton, SIGNAL(clicked()), SLOT(stopTracking()));
 
+	//open file button
+	QPushButton* openFileButton = new QPushButton("Open file");
+	connect(openFileButton, SIGNAL(clicked()), SLOT(openFile()));
+
 	options << startSkeletonButton << stopButton;
+
+	additionalOptions << openFileButton;
 }
 
-bool NiTETracking::init()
+bool NiTETracking::init(const char* file)
 {
 	openni::Status OpenNIstatus = openni::STATUS_OK;
 	nite::Status NITEstatus = nite::STATUS_OK;
@@ -54,7 +61,7 @@ bool NiTETracking::init()
 
 	logger.log("OpenNI initalizing...");
 
-	OpenNIstatus = device.open(openni::ANY_DEVICE);
+	OpenNIstatus = device.open(file);
 	if (OpenNIstatus != openni::STATUS_OK)
 	{
 		message = "Device open failed\n";
@@ -80,7 +87,7 @@ bool NiTETracking::init()
 		logger.log(message);
 		return false;
 	}
-
+	
 	logger.log("NiTE initialized succesful");
 	return true;
 }
@@ -141,6 +148,16 @@ void NiTETracking::stopTracking()
 	isRunning = false;
 }
 
+void NiTETracking::openFile()
+{
+	fileName = QFileDialog::getOpenFileName(NULL, tr("Open File"), "", tr("Files (*.oni)"));
+	if (fileName != "")
+	{
+		streamType = FROM_FILE;
+		QThread::start();
+	}
+}
+
 void NiTETracking::run()
 {
 	logger.log("NiTE thread is running...");
@@ -156,6 +173,14 @@ void NiTETracking::run()
 			memset(skeletonData, 0, sizeof(float)* NITE_JOINT_COUNT * 3);
 		}
 		break;
+	case FROM_FILE:
+		if (init(fileName.toStdString().c_str()))
+		{
+			logger.log("NiTE: skeleton tracking from file work.");
+			while (isRunning)
+				drawSkeleton();
+			memset(skeletonData, 0, sizeof(float)* NITE_JOINT_COUNT * 3);
+		}
 	default:
 		break;
 	}

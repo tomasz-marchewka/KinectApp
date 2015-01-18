@@ -324,8 +324,10 @@ void OpenNITracking::run()
 				drawSelected();
 			finalizeRecord();
 		}
+		break;
 	case TrackingMethod::FROM_FILE:
-		if (initFromFile(fileName.toStdString().c_str())) {
+		if (initFromFile(fileName.toStdString().c_str())) 
+		{
 			while (isRunning)
 				drawSelected();
 		}

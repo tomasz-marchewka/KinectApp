@@ -9,7 +9,7 @@ public:
 	NiTETracking(QString name, GLDisplay *display);
 	~NiTETracking();
 
-	virtual bool init();
+	virtual bool init(const char* file = openni::ANY_DEVICE);
 	virtual void draw();
 	virtual void close();
 
@@ -18,12 +18,13 @@ public:
 public slots:
 	void startSkeletonTracking();
 	void stopTracking();
+	void openFile();
 
 protected:
 	void run();
 	void createButtons();
 private:
-
+	QString fileName;
 	openni::Device device;
 	nite::UserTracker* userTracker;
 	nite::UserData* userData;

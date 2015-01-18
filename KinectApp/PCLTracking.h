@@ -19,6 +19,7 @@ public:
 public slots:
 	void startCaptureCloud();
 	void stopCapture();
+	void pause();
 	void openFile();
 	void saveFile();
 
@@ -27,11 +28,13 @@ protected:
 	void createButtons();
 
 private:
+	void drawFromFile(QString fileName);
 	boost::function<void(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr&)> function;
 	QString fileName;
-
+	bool saveData;
+	bool isPause;
 	//pcl::visualization::CloudViewer viewer;
 	pcl::Grabber* grabber;
-	float *data;
+	float* data;
 };
 
